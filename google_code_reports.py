@@ -66,7 +66,7 @@ def main():
 
     old_rate = old_reports["issue_count"]/old_reports["num_periods"]
     if (old_rate != 0 and
-            change_threshold * old_rate < new_reports["issues_this_period"]:)
+            change_threshold * old_rate < new_reports["issues_this_period"]):
         # Too many errors!
         hipchat_message.message_ones_and_zeros(
             "Elevated bug report rate on Google code!")
