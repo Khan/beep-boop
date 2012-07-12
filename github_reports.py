@@ -1,9 +1,5 @@
-#!/Users/josh/.virtualenv/khan/bin/python
 from contextlib import closing
 import copy
-from datetime import datetime
-from datetime import timedelta
-import iso8601
 import json
 import re
 import urllib2
@@ -11,8 +7,7 @@ import urllib2
 import hipchat_message
 
 
-change_threshold = 0.10  # How large of a change to be an anomaly?
-
+change_threshold = 1.15  # How large of a change to be an anomaly?
 
 def get_errors(old_reports):
 
@@ -44,7 +39,10 @@ def get_errors(old_reports):
                         done = True
                         break
 
-            if re.findall(r'<(.*?)>; rel="(.*?)"', issue_data.info().getheader("Link"))[0][1] == "next" and not done:
+            if ((re.findall(
+                    r'<(.*?)>; rel="(.*?)"',
+                    issue_data.info().getheader("Link"))[0][1] == "next")
+                    and not done):
                 get_issues(page + 1)
 
     get_issues(1)
@@ -52,58 +50,64 @@ def get_errors(old_reports):
     first_issue = first_issue[0]
 
     for issue in issues:
-        if len(re.findall(r'Khan:master/exercises/(.+?)\.html', issue["body"])) == 0:
+        regex_matches = re.findall(
+            r'Khan:master/exercises/(.+?)\.html', issue["body"])
+        if len(regex_matches) == 0:
             print issue
 
-        exercise = re.findall(r'Khan:master/exercises/(.+?)\.html', issue["body"])[0]
+        exercise = regex_matches[0]
         if not exercise in stats:
             stats[exercise] = {}
             stats[exercise]["issues"] = 1
         else:
             stats[exercise]["issues"] += 1
 
-    print "A total of %d issues were reported." % (len(issues))
     for ex in old_reports:
-        if ex != "max_id":
+        if ex != "max_id" and ex != "num_periods":
             old_reports[ex]["this_period"] = 0
-            old_reports[ex]["num_periods"] += 1
 
     for ex in stats:
         if ex not in old_reports:
             old_reports[ex] = {"num_errors": 0,
-                               "num_periods": 1,
                                "this_period": 0}
 
         old_reports[ex]["num_errors"] += stats[ex]["issues"]
         old_reports[ex]["this_period"] = stats[ex]["issues"]
 
     old_reports["max_id"] = first_issue
+    old_reports["num_periods"] += 1
 
     return old_reports
 
-try:
-    exercise_file = open("exercise_reports", 'r+')
-    ex_reports = json.loads(exercise_file.read())
-except IOError:
-    exercise_file = open("exercise_reports", 'w')
-    ex_reports = {}
+def main():
+    try:
+        exercise_file = open("exercise_reports", 'r+')
+        ex_reports = json.loads(exercise_file.read())
+    except IOError:
+        exercise_file = open("exercise_reports", 'w')
+        ex_reports = {"num_periods": 0, "max_id": -1}
 
+    new_reports = get_errors(copy.deepcopy(ex_reports))
 
-new_reports = get_errors(copy.deepcopy(ex_reports))
+    for ex in new_reports:
+        if ex == "max_id" or ex == "num_periods":
+            continue
 
-for ex in new_reports:
-    if ex == "max_id":
-        continue
-    if ex in ex_reports and ex_reports[ex]["num_errors"] != 0:
-        old_rate = ex_reports[ex]["num_errors"]/ex_reports[ex]["num_periods"]
-        if old_rate + change_threshold * old_rate < new_reports[ex]["this_period"]:
-            # Too many errors!
-            print "Sending message!"
-            hipchat_message.message_ones_and_zeros("Elevated exercise bug report rate in exercise %s!" %ex)
+        if ex in ex_reports and ex_reports[ex]["num_errors"] != 0:
+            old_rate = ex_reports[ex]["num_errors"]/ex_reports["num_periods"]
+            threshold_rate = change_threshold * old_rate
+            if ((old_rate == 1 and new_reports[ex]["this_period"] > 2) or
+                    threshold_rate < new_reports[ex]["this_period"]):
+                # Too many errors!
+                hipchat_message.message_ones_and_zeros(
+                    "Elevated exercise bug report rate in exercise %s!" %ex)
 
-# Overwrite with new contents
-exercise_file.seek(0)
-exercise_file.truncate()
-exercise_file.write(json.dumps(new_reports))
+    # Overwrite with new contents
+    exercise_file.seek(0)
+    exercise_file.truncate()
+    exercise_file.write(json.dumps(new_reports))
 
-exercise_file.close()
+    exercise_file.close()
+
+if  __name__ == "__main__":
+    main()
