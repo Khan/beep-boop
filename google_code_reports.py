@@ -6,6 +6,7 @@ import hipchat_message
 
 change_threshold = 1.10
 
+
 def get_errors(old_reports):
 
     last_id = old_reports["last_id"]
@@ -15,7 +16,7 @@ def get_errors(old_reports):
     def get_issues(page, last_id):
         request = urllib2.urlopen(
             "http://code.google.com/p/khanacademy/issues/csv?can=2&q=&colspec=ID&sort=-ID&start=%d"
-            % (page*100))
+            % (page * 100))
         issues = request.read()
         request.close()
 
@@ -49,7 +50,8 @@ def get_errors(old_reports):
     old_reports["issues_this_period"] = issue_count
 
     return old_reports
-    
+
+
 def main():
     try:
         google_code_file = open("google_code", 'r+')
@@ -64,12 +66,12 @@ def main():
     old_reports["num_periods"] += 1
     new_reports = get_errors(copy.deepcopy(old_reports))
 
-    old_rate = old_reports["issue_count"]/old_reports["num_periods"]
+    old_rate = old_reports["issue_count"] / old_reports["num_periods"]
     if (old_rate != 0 and
             change_threshold * old_rate < new_reports["issues_this_period"]):
         # Too many errors!
         hipchat_message.message_ones_and_zeros(
-            "Elevated bug report rate on Google code!")
+            "Elevated bug report rate on <a href='http://code.google.com/p/khanacademy/issues/'>Google code!</a>")
 
     google_code_file.seek(0)
     google_code_file.truncate()

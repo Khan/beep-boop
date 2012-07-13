@@ -9,6 +9,7 @@ import hipchat_message
 
 change_threshold = 1.15  # How large of a change to be an anomaly?
 
+
 def get_errors(old_reports):
 
     stats = {}
@@ -79,6 +80,7 @@ def get_errors(old_reports):
 
     return old_reports
 
+
 def main():
     try:
         exercise_file = open("exercise_reports", 'r+')
@@ -94,13 +96,13 @@ def main():
             continue
 
         if ex in ex_reports and ex_reports[ex]["num_errors"] != 0:
-            old_rate = ex_reports[ex]["num_errors"]/ex_reports["num_periods"]
+            old_rate = ex_reports[ex]["num_errors"] / ex_reports["num_periods"]
             threshold_rate = change_threshold * old_rate
             if ((old_rate == 1 and new_reports[ex]["this_period"] > 2) or
                     threshold_rate < new_reports[ex]["this_period"]):
                 # Too many errors!
                 hipchat_message.message_ones_and_zeros(
-                    "Elevated exercise bug report rate in exercise %s!" %ex)
+                    "Elevated exercise bug report rate in exercise %s!" % ex)
 
     # Overwrite with new contents
     exercise_file.seek(0)

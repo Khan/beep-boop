@@ -8,4 +8,4 @@ while True:
     github_reports.main()
     google_code_reports.main()
     print("Sleeping...")
-    time.sleep(60*10)
+    time.sleep(60 * 10)
