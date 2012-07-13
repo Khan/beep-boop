@@ -111,7 +111,7 @@ def main():
         if ex in ex_reports and ex_reports[ex]["num_errors"] != 0:
             old_rate = ex_reports[ex]["num_errors"] / ex_reports["num_periods"]
             threshold_rate = change_threshold * old_rate
-            if ((old_rate == 1 and new_reports[ex]["this_period"] > 2) or
+            if (new_reports[ex]["this_period"] >= 2 and
                     threshold_rate < new_reports[ex]["this_period"]):
                 # Too many errors!
                 hipchat_message.send_message(
