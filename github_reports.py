@@ -119,7 +119,7 @@ def main():
                     "(Reports: %s)"
                         % (ex, generate_links(ex["hrefs"])),
                     room_id="Exercise internals")
-        del ex["href"]  # We don't need to keep the link around
+        del new_reports[ex]["href"]  # We don't need to keep the link around
 
     # Overwrite with new contents
     exercise_file.seek(0)
