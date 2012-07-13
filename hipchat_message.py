@@ -4,7 +4,7 @@ import hipchat.room
 import hipchat.config
 
 
-def message_ones_and_zeros(msg, room_id="1s and 0s", room_name="1s and 0s"):
+def send_message(msg, room_id="1s and 0s"):
     result = ""
     msg_dict = {
         "room_id": room_id,
@@ -18,7 +18,7 @@ def message_ones_and_zeros(msg, room_id="1s and 0s", room_name="1s and 0s"):
     except:
         pass
 
-    format_args = (datetime.datetime.now(), msg, room_name) 
+    format_args = (datetime.datetime.now(), msg, room_id)
     if "sent" in result:
         print "At %s, sent message '%s' to room '%s'" % format_args
     else:

@@ -70,7 +70,7 @@ def main():
     if (old_rate != 0 and
             change_threshold * old_rate < new_reports["issues_this_period"]):
         # Too many errors!
-        hipchat_message.message_ones_and_zeros(
+        hipchat_message.send_message(
             "Elevated bug report rate on <a href='http://code.google.com/p/khanacademy/issues/'>Google code!</a>")
 
     google_code_file.seek(0)
