@@ -60,8 +60,10 @@ def get_errors(old_reports):
         if not exercise in stats:
             stats[exercise] = {}
             stats[exercise]["issues"] = 1
+            stats[exercise]["href"] = [issue["html_url"]]
         else:
             stats[exercise]["issues"] += 1
+            stats[exercise]["href"].append(issue["html_url"])
 
     for ex in old_reports:
         if ex != "max_id" and ex != "num_periods":
@@ -74,11 +76,22 @@ def get_errors(old_reports):
 
         old_reports[ex]["num_errors"] += stats[ex]["issues"]
         old_reports[ex]["this_period"] = stats[ex]["issues"]
+        old_reports[ex]["href"] = stats[ex]["href"]
 
     old_reports["max_id"] = first_issue
     old_reports["num_periods"] += 1
 
     return old_reports
+
+
+def generate_links(links):
+    """Given a list of links, generate a string that can be inserted into
+    a HipChat message with them."""
+    html = ""
+    for i in xrange(len(links)):
+        html += "<a href='%s'>%d</a>, " % (links[i], i)
+    html = html[:-2]  # strip final ', '
+    return html
 
 
 def main():
@@ -101,8 +114,12 @@ def main():
             if ((old_rate == 1 and new_reports[ex]["this_period"] > 2) or
                     threshold_rate < new_reports[ex]["this_period"]):
                 # Too many errors!
-                hipchat_message.message_ones_and_zeros(
-                    "Elevated exercise bug report rate in exercise %s!" % ex)
+                hipchat_message.send_message(
+                    "Elevated exercise bug report rate in exercise %s! "
+                    "(Reports: %s)"
+                        % (ex, generate_links(ex["hrefs"])),
+                    room_id="Exercise internals")
+        del ex["href"]  # We don't need to keep the link around
 
     # Overwrite with new contents
     exercise_file.seek(0)
