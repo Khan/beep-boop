@@ -118,7 +118,7 @@ def main():
                     "Elevated exercise bug report rate in exercise %s! "
                     "(Reports: %s)"
                         % (ex, generate_links(new_reports[ex]["href"])),
-                    room_id="Exercise internals")
+                    room_id="Exercises")
         if "href" in new_reports[ex]:
             del new_reports[ex]["href"]  # don't need to keep the link around
 
