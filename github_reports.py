@@ -117,9 +117,10 @@ def main():
                 hipchat_message.send_message(
                     "Elevated exercise bug report rate in exercise %s! "
                     "(Reports: %s)"
-                        % (ex, generate_links(ex["hrefs"])),
+                        % (ex, generate_links(new_reports[ex]["href"])),
                     room_id="Exercise internals")
-        del new_reports[ex]["href"]  # We don't need to keep the link around
+        if "href" in new_reports[ex]:
+            del new_reports[ex]["href"]  # don't need to keep the link around
 
     # Overwrite with new contents
     exercise_file.seek(0)
