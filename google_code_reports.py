@@ -46,11 +46,12 @@ def get_errors(old_reports):
         if should_continue and stop_id != -1:
             get_issues(page + 1, stop_id)
 
-        if stop_id > issues[0][0]:
+        if stop_id == -1:
             # Indicate first time in range if necessary
-            return (stop_id, issues[len(issues) - 1][1])
+            return (issues[0][0], issues[-1][1])
         else:
-            return issues[0][0]
+            # max is in case of no new issues
+            return max(issues[0][0], stop_id)
 
     result = get_issues(0, old_reports["last_id"])
 
