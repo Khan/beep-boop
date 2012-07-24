@@ -20,25 +20,24 @@ def get_errors(old_reports):
 
     def get_issues(page, stop_id):
         request = urllib2.urlopen(
-            "http://code.google.com/p/khanacademy/issues/csv?can=2&q=&colspec=ID&sort=-ID&start=%d"
+            "http://code.google.com/p/khanacademy/issues/csv?can=2&q=&colspec=ID+ModifiedTimestamp&sort=-ID&start=%d"
             % (page * 100))
         issues = request.read()
         request.close()
 
         # Parse the CSV file
-        issues = issues.split("\n")
+        issues = issues.rstrip().split("\n")
         # Ignore trailing commas
-        issues = [issue.rstrip(",") for issue in issues]
         issues = [issue.split(",") for issue in issues]
         issues = issues[1:]  # Ignore column headers
-        issues = issues[:-2]  # Strip junk from the end
-        issues = [int(issue[0].replace('"', '')) for issue in issues]
+        issues = issues[:-1]  # Strip junk from the end
+        issues = [[int(x.replace('"', '')) for x in issue] for issue in issues]
         # Note: We don't need to explicitly sort here because the request
         # to Google specified we sort by -ID
 
         should_continue = True
         for issue in issues:
-            if issue > stop_id:
+            if issue[0] > stop_id:
                 issue_count[0] += 1
             else:
                 should_continue = False
@@ -47,13 +46,24 @@ def get_errors(old_reports):
         if should_continue and stop_id != -1:
             get_issues(page + 1, stop_id)
 
-        return max(issues[0], stop_id)
+        if stop_id > issues[0][0]:
+            # Indicate first time in range if necessary
+            return (stop_id, issues[len(issues) - 1][1])
+        else:
+            return issues[0][0]
 
-    max_id = get_issues(0, old_reports["last_id"])
-    issue_count = issue_count[0]
+    result = get_issues(0, old_reports["last_id"])
 
     cur_time = time.time()
-    time_this_period = cur_time - old_reports["last_time"]
+
+    if len(result) == 2:
+        max_id, first_time = result
+        time_this_period = cur_time - first_time
+    else:
+        max_id = result
+        time_this_period = cur_time - old_reports["last_time"]
+
+    issue_count = issue_count[0]
 
     old_reports["last_id"] = max_id
     old_reports["issue_count"] += issue_count
