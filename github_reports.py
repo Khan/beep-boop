@@ -2,12 +2,20 @@ from contextlib import closing
 import copy
 import json
 import re
+import time
 import urllib2
 
 import hipchat_message
 
 
-change_threshold = 1.15  # How large of a change to be an anomaly?
+# How large of a change to be an anomaly?
+CHANGE_THRESHOLD = 1.15
+# How large of a change if rate was too small before
+CHANGE_THRESHOLD_SMALL = 1.90
+# The rate of reports below which we should use the higher threshold.
+SMALL_RATE = 0.01 / (60 * 60)
+# Non-exercise keys in the dictionary
+SPECIAL_VALUES = ["elapsed_time", "max_id", "last_time"]
 
 
 def get_errors(old_reports):
@@ -15,12 +23,12 @@ def get_errors(old_reports):
     stats = {}
     issues = []
 
-    try:
-        last_issue = old_reports["max_id"]
-    except:
-        last_issue = -1  # Indicates we shouldn't do more than 1 page
+    # The issue at which we should stop looking for more
+    # -1 indicates we shouldn't do more than 1 page
+    last_issue = old_reports.get("max_id", -1)
 
-    first_issue = [last_issue]  # Weird hack because python and closures are :(
+    # Track the number of the first issue we find this time
+    first_issue = [last_issue]  # Lets us modify this from within get_issues
 
     def get_issues(page):
         with closing(urllib2.urlopen(
@@ -66,7 +74,7 @@ def get_errors(old_reports):
             stats[exercise]["href"].append(issue["html_url"])
 
     for ex in old_reports:
-        if ex != "max_id" and ex != "num_periods":
+        if ex not in SPECIAL_VALUES:
             old_reports[ex]["this_period"] = 0
 
     for ex in stats:
@@ -78,8 +86,13 @@ def get_errors(old_reports):
         old_reports[ex]["this_period"] = stats[ex]["issues"]
         old_reports[ex]["href"] = stats[ex]["href"]
 
+    cur_time = time.time()
+
+    this_period = cur_time - old_reports["last_time"]
+
     old_reports["max_id"] = first_issue
-    old_reports["num_periods"] += 1
+    old_reports["elapsed_time"] += this_period
+    old_reports["last_time"] = cur_time
 
     return old_reports
 
@@ -87,11 +100,11 @@ def get_errors(old_reports):
 def generate_links(links):
     """Given a list of links, generate a string that can be inserted into
     a HipChat message with them."""
-    html = ""
+    html = []
     for i in xrange(len(links)):
-        html += "<a href='%s'>%d</a>, " % (links[i], i)
-    html = html[:-2]  # strip final ', '
-    return html
+        html.append("<a href='%s'>%d</a>" % (links[i], i + 1))
+
+    return ", ".join(html)
 
 
 def main():
@@ -100,24 +113,36 @@ def main():
         ex_reports = json.loads(exercise_file.read())
     except IOError:
         exercise_file = open("exercise_reports", 'w')
-        ex_reports = {"num_periods": 0, "max_id": -1}
+        ex_reports = {"elapsed_time": 0,
+                      "max_id": -1,
+                      "last_time": 0}
 
     new_reports = get_errors(copy.deepcopy(ex_reports))
 
     for ex in new_reports:
-        if ex == "max_id" or ex == "num_periods":
+        if ex in SPECIAL_VALUES:
             continue
 
-        if ex in ex_reports and ex_reports[ex]["num_errors"] != 0:
-            old_rate = ex_reports[ex]["num_errors"] / ex_reports["num_periods"]
-            threshold_rate = change_threshold * old_rate
-            if (new_reports[ex]["this_period"] >= 2 and
-                    threshold_rate < new_reports[ex]["this_period"]):
+        if ex in ex_reports and ex_reports[ex]["num_errors"] > 0:
+            old_rate = (ex_reports[ex]["num_errors"] /
+                            ex_reports["elapsed_time"])
+            new_rate = (new_reports[ex]["this_period"] /
+                            new_reports["elapsed_time"])
+
+            threshold = (CHANGE_THRESHOLD if old_rate > SMALL_RATE
+                         else CHANGE_THRESHOLD_SMALL)
+
+            if threshold * old_rate < new_rate:
                 # Too many errors!
                 hipchat_message.send_message(
-                    "Elevated exercise bug report rate in exercise %s! "
-                    "(Reports: %s)"
-                        % (ex, generate_links(new_reports[ex]["href"])),
+                    "Elevated exercise bug report rate in exercise %s!"
+                    " (Reports: %s. Rate: %.3f per hour."
+                    " Normal rate: %.3f per hour."
+                    " New rate is %.2f%% of normal.)"
+                        % (ex, generate_links(new_reports[ex]["href"]),
+                          new_rate * 60 * 60,
+                          old_rate * 60 * 60,
+                          (new_rate / old_rate) * 100),
                     room_id="Exercises")
         if "href" in new_reports[ex]:
             del new_reports[ex]["href"]  # don't need to keep the link around
