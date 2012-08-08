@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 
 import hipchat.room
@@ -27,4 +28,4 @@ def send_message(msg, room_id="1s and 0s"):
                               % format_args)
         print >> sys.stderr, "Result from hipchat: %s" % result
 
-hipchat.config.init_cfg("hipchat.cfg")
+hipchat.config.init_cfg(os.path.join(os.path.dirname(__file__), "hipchat.cfg"))
