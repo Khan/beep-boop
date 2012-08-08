@@ -79,11 +79,15 @@ def get_errors(old_reports):
 
 def main():
     try:
-        google_code_file = open("google_code", 'r+')
+        google_code_file = open(
+            os.path.join(os.path.dirname(__file__), "google_code"), 'r+')
         old_reports = json.loads(google_code_file.read())
     except IOError:
-        google_code_file = open("google_code", 'w')
-        old_reports = {"elapsed_time": 0,
+        google_code_file = open(
+            os.path.join(os.path.dirname(__file__), "google_code"), 'w')
+        old_reports = # elapsed_time is filler value: doesn't matter what it is
+                      # since issue_count is 0.
+                      {"elapsed_time": 1,
                        "last_id": -1,
                        "issue_count": 0,
                        "last_time": 0}

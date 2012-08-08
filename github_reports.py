@@ -109,11 +109,13 @@ def generate_links(links):
 
 def main():
     try:
-        exercise_file = open("exercise_reports", 'r+')
+        exercise_file = open(
+            os.path.join(os.path.dirname(__file__), "exercise_reports"), 'r+')
         ex_reports = json.loads(exercise_file.read())
     except IOError:
-        exercise_file = open("exercise_reports", 'w')
-        ex_reports = {"elapsed_time": 0,
+        exercise_file = open(
+            os.path.join(os.path.dirname(__file__), "exercise_reports"), 'w')
+        ex_reports = {"elapsed_time": 1,  # Filler value
                       "max_id": -1,
                       "last_time": 0}
 
