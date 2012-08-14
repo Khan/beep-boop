@@ -1,3 +1,4 @@
+import contextlib
 import copy
 import json
 import time
@@ -20,11 +21,11 @@ def get_errors(old_reports):
     issue_count = [0]
 
     def get_issues(page, stop_id):
-        request = urllib2.urlopen(
-            "http://code.google.com/p/khanacademy/issues/csv?can=2&q=&colspec=ID+ModifiedTimestamp&sort=-ID&start=%d"
-            % (page * 100))
-        issues = request.read()
-        request.close()
+        url = ("http://code.google.com/p/khanacademy/issues/csv"
+               "?can=2&q=&colspec=ID+ModifiedTimestamp&sort=-ID&start=%d"
+               % (page * 100))
+        with contextlib.closing(urllib2.urlopen(url)) as request:
+            issues = request.read()
 
         # Parse the CSV file
         issues = issues.rstrip().split("\n")
@@ -93,21 +94,26 @@ def main():
 
     new_reports = get_errors(copy.deepcopy(old_reports))
 
-    old_rate = old_reports["issue_count"] / old_reports["elapsed_time"]
-    new_rate = (new_reports["issues_this_period"] /
-                    new_reports["time_this_period"])
+    time_this_period = new_reports["time_this_period"]
 
-    if (old_rate != 0 and change_threshold * old_rate < new_rate):
+    mean, probability = util.probability(old_reports["issue_count"],
+                                         old_reports["elapsed_time"],
+                                         new_reports["issues_this_period"],
+                                         time_this_period)
+
+    if (mean != 0 and probability > 0.99):
         # Too many errors!
         hipchat_message.send_message(
             "Elevated bug report rate on"
             " <a href='http://code.google.com/p/khanacademy/issues/'>Google"
             " code!</a>"
-            " Current rate: %.3f per hour. Average rate: %.3f per hour."
-            " (Current is %.2f%% of average)"
-            % (new_rate * 60 * 60,
-               old_rate * 60 * 60,
-               (new_rate / old_rate) * 100))
+            " We saw %s in the last %s minutes,"
+            " while the mean indicates we should see around %s."
+            " Probability that this is abnormally elevated: %.4f."
+            % (util.thousand_commas(new_reports["issues_this_period"]),
+               util.thousand_commas(int(time_this_period / 60)),
+               util.thousand_commas(round(mean, 2)),
+               probability))
 
     # Delete fields we don't need anymore
     del(new_reports["issues_this_period"])
