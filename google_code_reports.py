@@ -4,6 +4,7 @@ import time
 import urllib2
 
 import hipchat_message
+import util
 
 # Threshold of average to report an elevated rate
 change_threshold = 1.10
@@ -57,7 +58,7 @@ def get_errors(old_reports):
 
     cur_time = time.time()
 
-    if len(result) == 2:
+    if isinstance(result, tuple):
         max_id, first_time = result
         time_this_period = cur_time - first_time
     else:
@@ -79,15 +80,13 @@ def get_errors(old_reports):
 
 def main():
     try:
-        google_code_file = open(
-            os.path.join(os.path.dirname(__file__), "google_code"), 'r+')
+        google_code_file = open(util.relative_path("google_code"), 'r+')
         old_reports = json.loads(google_code_file.read())
     except IOError:
-        google_code_file = open(
-            os.path.join(os.path.dirname(__file__), "google_code"), 'w')
-        old_reports = # elapsed_time is filler value: doesn't matter what it is
-                      # since issue_count is 0.
-                      {"elapsed_time": 1,
+        google_code_file = open(util.relative_path("google_code"), 'w')
+        # elapsed_time is filler value: doesn't matter what it is
+        # since issue_count is 0.
+        old_reports = {"elapsed_time": 1,
                        "last_id": -1,
                        "issue_count": 0,
                        "last_time": 0}
