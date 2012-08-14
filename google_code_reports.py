@@ -105,7 +105,7 @@ def main():
         # Too many errors!
         hipchat_message.send_message(
             "Elevated bug report rate on"
-            " <a href='http://code.google.com/p/khanacademy/issues/'>Google"
+            " <a href='http://khanacademy.org/r/bugs'>Google"
             " code!</a>"
             " We saw %s in the last %s minutes,"
             " while the mean indicates we should see around %s."
