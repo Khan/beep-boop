@@ -13,7 +13,7 @@ def probability(past_errors,
     as well as the mean (for displaying to users).
     """
     mean = (past_errors / past_time) * time_this_period
-    return (mean, poisson_cdf(errors_this_period, mean))
+    return (mean, poisson_cdf(errors_this_period - 1, mean))
 
 
 def poisson_cdf(actual, mean):
