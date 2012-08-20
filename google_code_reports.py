@@ -11,6 +11,13 @@ import util
 change_threshold = 1.10
 
 
+def intify(s):
+    """Given a string of format "40", return the integer corresponding to it
+    (in this case 40)
+    """
+    return int(s.replace('"', ''))
+
+
 def get_errors(old_reports):
     '''Given an old dict (contents of google_code), get new issues from Google
     Code and return an updated version of the dict with information about
@@ -19,10 +26,12 @@ def get_errors(old_reports):
 
     # Use a list because otherwise we couldn't access issue_count in get_issues
     issue_count = [0]
+    titles_seen = set([])
 
     def get_issues(page, stop_id):
         url = ("http://code.google.com/p/khanacademy/issues/csv"
-               "?can=2&q=&colspec=ID+ModifiedTimestamp&sort=-ID&start=%d"
+               "?can=2&q=&colspec=ID+ModifiedTimestamp+Summary"
+               "&sort=-ID&start=%d"
                % (page * 100))
         with contextlib.closing(urllib2.urlopen(url)) as request:
             issues = request.read()
@@ -33,14 +42,19 @@ def get_errors(old_reports):
         issues = [issue.split(",") for issue in issues]
         issues = issues[1:]  # Ignore column headers
         issues = issues[:-1]  # Strip junk from the end
-        issues = [[int(x.replace('"', '')) for x in issue] for issue in issues]
+        issues = [[intify(issue[0]),
+                   intify(issue[1]),
+                   issue[2]] for issue in issues]
         # Note: We don't need to explicitly sort here because the request
         # to Google specified we sort by -ID
 
         should_continue = True
         for issue in issues:
-            if issue[0] > stop_id:
+            issue_id, _, issue_title = issue
+            if issue_id > stop_id:
+                #if issue_title not in titles_seen:
                 issue_count[0] += 1
+                titles_seen.add((issue_title))
             else:
                 should_continue = False
                 break
