@@ -25,6 +25,9 @@ def poisson_cdf(actual, mean):
     a mean of 746 or higher would cause a zero to propagate and make us report
     a probability of 0 even if the actual probability was almost 1.)
     """
+    if actual < 0:
+        return decimal.Decimal(0)
+
     if isinstance(mean, float):
         mean = decimal.Decimal(mean)
 
