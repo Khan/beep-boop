@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import bisect
 import contextlib
 import copy

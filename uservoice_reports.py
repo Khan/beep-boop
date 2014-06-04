@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """Warn if the bug-report rate has increased recently, on UserVoice.
 
 While we used to ask users to report problems on a google code issues
