@@ -119,16 +119,17 @@ def main():
                                            num_new_suggestions,
                                            time_this_period)
 
-    if (mean != 0 and probability > 0.99):
+    if (mean != 0 and probability > 0.9995):
         # Too many errors!
+        url = 'https://khanacademyfeedback.uservoice.com/251593-bugs-troubleshooting/'
         hipchat_message.send_message(
             "Elevated bug report rate on"
-            " <a href='http://khanacademy.org/r/bugs'>Google"
-            " code!</a>"
+            " <a href='%s'>!</a>"
             " We saw %s in the last %s minutes,"
             " while the mean indicates we should see around %s."
             " Probability that this is abnormally elevated: %.4f."
-            % (util.thousand_commas(num_new_suggestions),
+            % (url,
+               util.thousand_commas(num_new_suggestions),
                util.thousand_commas(int(time_this_period / 60)),
                util.thousand_commas(round(mean, 2)),
                probability))
