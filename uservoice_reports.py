@@ -19,7 +19,6 @@ import datetime
 import json
 import urllib2
 
-import hipchat_message
 import util
 
 # Threshold of average to report an elevated rate
@@ -122,7 +121,7 @@ def main():
     if (mean != 0 and probability > 0.9995):
         # Too many errors!
         url = 'https://khanacademyfeedback.uservoice.com/251593-bugs-troubleshooting/'
-        hipchat_message.send_message(
+        util.send_to_hipchat(
             "Elevated bug report rate on"
             " <a href='%s'>!</a>"
             " We saw %s in the last %s minutes,"
@@ -132,7 +131,8 @@ def main():
                util.thousand_commas(num_new_suggestions),
                util.thousand_commas(int(time_this_period / 60)),
                util.thousand_commas(round(mean, 2)),
-               probability))
+               probability),
+            room_id='1s and 0s')
 
     new_data = {"elapsed_time": old_data["elapsed_time"] + time_this_period,
                 "issue_count": old_data["issue_count"] + num_new_suggestions,

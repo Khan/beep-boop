@@ -1,5 +1,8 @@
 import decimal
+import logging
 import os
+
+import alertlib
 
 
 def probability(past_errors,
@@ -64,3 +67,8 @@ def thousand_commas(n):
         n[0] = thousand_commas(n[0][:-3]) + "," + n[0][-3:]
 
     return ".".join(n)
+
+
+def send_to_hipchat(message, room_id):
+    alertlib.Alert(message, html=True, severity=logging.ERROR) \
+        .send_to_hipchat(room_id, sender='beep-boop')

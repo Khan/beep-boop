@@ -1,0 +1,3 @@
+[submodule "alertlib"]
+	path = alertlib
+	url = https://github.com/Khan/alertlib

@@ -9,7 +9,6 @@ import re
 import time
 import urllib2
 
-import hipchat_message
 import util
 
 # Non-exercise keys in the dictionary
@@ -178,7 +177,7 @@ def main():
 
             if (probability > 0.997 and errors_this_period > 1):
                 # Too many errors!
-                hipchat_message.send_message(
+                util.send_to_hipchat(
                     "Elevated exercise bug report rate in exercise %s!"
                     " Reports: %s.  We saw %s in the last %s minutes,"
                     " while the mean indicates we should see around %s."
