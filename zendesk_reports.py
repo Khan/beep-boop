@@ -149,6 +149,13 @@ def main():
                                            num_new_tickets,
                                            time_this_period)
 
+    print ("%s] TOTAL %s/%ss; %s-: %s/%ss; m=%.3f p=%.3f"
+           % (time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+              old_data["ticket_count"], int(old_data["elapsed_time"]),
+              old_data["last_time_t"],
+              num_new_tickets, time_this_period,
+              mean, probability))
+
     if (mean != 0 and probability > 0.9995):
         # Too many errors!
         url = 'https://khanacademy.zendesk.com/agent/#/dashboard'

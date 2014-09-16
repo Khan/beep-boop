@@ -175,6 +175,13 @@ def main():
                                                  errors_this_period,
                                                  period_len)
 
+            print ("%s] TOTAL %s/%ss; %s-: %s/%ss; m=%.3f p=%.3f"
+                   % (time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+                      ex_reports[ex]["num_errors"], ex_reports["elapsed_time"],
+                      ex_reports["last_time"],
+                      errors_this_period, period_len,
+                      mean, probability))
+
             if (probability > 0.997 and errors_this_period > 1):
                 # Too many errors!
                 util.send_to_hipchat(

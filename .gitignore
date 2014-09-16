@@ -1,6 +1,9 @@
 *.pyc
 exercise_reports
 google_code
-uservoice
 hipchat.cfg
+uservoice
 uservoice.cfg
+zendesk
+zendesk.cfg
+
