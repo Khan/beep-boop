@@ -158,10 +158,9 @@ def main():
 
     if (mean != 0 and probability > 0.9995):
         # Too many errors!
-        url = 'https://khanacademy.zendesk.com/agent/#/dashboard'
+        url = 'https://khanacademy.zendesk.com/agent/#/filters/35452030'
         util.send_to_hipchat(
-            "Elevated bug report rate on"
-            " <a href='%s'>!</a>"
+            "Elevated bug report rate on <a href='%s'>Zendesk</a>!"
             " We saw %s in the last %s minutes,"
             " while the mean indicates we should see around %s."
             " Probability that this is abnormally elevated: %.4f."
