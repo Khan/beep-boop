@@ -157,8 +157,8 @@ def main():
               mean, probability))
 
     if (mean != 0 and probability > 0.9995):
-        # Too many errors!
-        url = 'https://khanacademy.zendesk.com/agent/#/filters/35452030'
+        # Too many errors!  Point people to the 'all tickets' filter.
+        url = 'https://khanacademy.zendesk.com/agent/filters/37051364'
         util.send_to_hipchat(
             "Elevated bug report rate on <a href='%s'>Zendesk</a>!"
             " We saw %s in the last %s minutes,"
