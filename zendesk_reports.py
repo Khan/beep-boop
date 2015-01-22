@@ -19,10 +19,6 @@ import urllib2
 
 import util
 
-# Threshold of average to report an elevated rate
-change_threshold = 1.10
-
-
 # In theory, you can use an API key to access zendesk data, but I
 # couldn't get it to work in my tests (I got 'access denied'), so we
 # use the real password instead. :-(
@@ -104,7 +100,7 @@ def num_tickets_between(start_time_t, end_time_t):
             num_tickets += 1
             # See if we're the oldest ticket
             if (oldest_ticket_time_t is None or
-                    oldest_ticket_time_t < ticket_time_t):
+                    oldest_ticket_time_t > ticket_time_t):
                 oldest_ticket_time_t = ticket_time_t
 
         if not ticket_data['next_page']:

@@ -1,3 +1,4 @@
+import collections
 import decimal
 import logging
 import os
@@ -67,6 +68,17 @@ def thousand_commas(n):
         n[0] = thousand_commas(n[0][:-3]) + "," + n[0][-3:]
 
     return ".".join(n)
+
+
+def merge_int_dicts(d1, d2):
+    """Given two dictionaries with integer values, merge them.
+    EX: merge_int_dicts({'a': 1}, {'a': 2, 'b': 5}) = {'a': 3, 'b': 5}
+    """
+    merged_dict = collections.defaultdict(int)
+    for d in (d1, d2):
+        for k in d:
+            merged_dict[k] += d[k]
+    return merged_dict
 
 
 def send_to_hipchat(message, room_id):
