@@ -12,6 +12,7 @@ on a per-exercise basis.
 import base64
 import collections
 import contextlib
+import copy
 import cPickle
 import json
 import time
@@ -19,6 +20,10 @@ import urllib
 import urllib2
 
 import util
+
+# Only report if issue count exceeds threshold
+THRESHOLD = 3
+
 
 # Easier to use basic authentication than setup OAuth
 JIRA_USER = 'KhanBugz'
@@ -86,7 +91,7 @@ def get_ticket_data(start_time_t):
 
 def num_tickets_between(start_time_t, end_time_t):
     num_tickets = collections.defaultdict(int)
-    oldest_ticket_time_t = None
+    oldest_ticket_time_t = {}
 
     while start_time_t < end_time_t:
         ticket_data = get_ticket_data(start_time_t)
@@ -100,10 +105,11 @@ def num_tickets_between(start_time_t, end_time_t):
             # Exercise type comes as a list (should be a list of one item)
             for exercise_type in ticket['fields'][EXERCISE_FIELD]:
                 num_tickets[exercise_type] += 1
-            # See if we're the oldest ticket
-            if (oldest_ticket_time_t is None or
-                    oldest_ticket_time_t > ticket_time_t):
-                oldest_ticket_time_t = ticket_time_t
+
+                # See if we're the oldest ticket for this exercise
+                if (not exercise_type in oldest_ticket_time_t or
+                        oldest_ticket_time_t[exercise_type] > ticket_time_t):
+                    oldest_ticket_time_t[exercise_type] = ticket_time_t
 
         # Tickets are ordered by time of creation (ascending), so last ticket
         # is most recent.
@@ -123,7 +129,7 @@ def main():
         with open(jira_status_file) as f:
             old_data = cPickle.load(f)
     except IOError:
-        old_data = {'elapsed_time': 0.0001,   # avoid a divide-by-0
+        old_data = {'elapsed_times': {},
                     'ticket_counts': collections.defaultdict(int),
                     'last_time_t': None,
                     }
@@ -138,30 +144,35 @@ def main():
     (num_new_tickets, oldest_ticket_time_t) = num_tickets_between(
         old_data['last_time_t'] or (now - 86400 * num_days_in_past), now)
 
-    # The first time we run this, we take the starting time to be the
-    # time of the first bug report.
-    if old_data['last_time_t'] is None:
-        old_data['last_time_t'] = oldest_ticket_time_t
-
-    time_this_period = now - old_data['last_time_t']
-
+    # Elapsed time is computed per-exercise, so store values as we go.
+    # We use a copy so that exercises that don't appear as new tickets still
+    # have their old elapsed times preserved.
+    elapsed_times = copy.copy(old_data['elapsed_times'])
     for exercise in num_new_tickets:
+        # If this is the first time we're running, we don't have a last_time_t,
+        # so we take the oldest ticket for each exercise as its last_time_t
+        last_time_t = old_data['last_time_t'] or oldest_ticket_time_t[exercise]
+        time_this_period = now - last_time_t
+        # Avoid divide-by-0 if this is the first time we've seen an exercise
+        time_last_period = old_data['elapsed_times'].get(exercise, 0.0001)
+
         num_old_tickets_for_exercise = old_data['ticket_counts'][exercise]
         num_new_tickets_for_exercise = num_new_tickets[exercise]
         (mean, probability) = util.probability(num_old_tickets_for_exercise,
-                                               old_data['elapsed_time'],
+                                               time_last_period,
                                                num_new_tickets_for_exercise,
                                                time_this_period)
 
         print('%s] %s TOTAL %s/%ss; %s-: %s/%ss; m=%.3f p=%.3f'
               % (time.strftime('%Y-%m-%d %H:%M:%S %Z'),
                   exercise,
-                  num_old_tickets_for_exercise, int(old_data['elapsed_time']),
-                  old_data['last_time_t'],
+                  num_old_tickets_for_exercise, int(time_last_period),
+                  last_time_t,
                   num_new_tickets_for_exercise, time_this_period,
                   mean, probability))
 
-        if (mean != 0 and probability > 0.9995):
+        if (mean != 0 and probability > 0.9995 and
+                num_new_tickets_for_exercise > THRESHOLD):
             util.send_to_hipchat(
                 'Elevated bug report rate on exercise \'%s\'!'
                 ' We saw %s in the last %s minutes,'
@@ -173,10 +184,11 @@ def main():
                    util.thousand_commas(round(mean, 2)),
                    probability),
                 room_id='jira-monitoring')
+        elapsed_times[exercise] = time_last_period + time_this_period
 
     new_ticket_counts = util.merge_int_dicts(old_data['ticket_counts'],
                                              num_new_tickets)
-    new_data = {'elapsed_time': old_data['elapsed_time'] + time_this_period,
+    new_data = {'elapsed_times': elapsed_times,
                 'ticket_counts': new_ticket_counts,
                 'last_time_t': now,
                 }
