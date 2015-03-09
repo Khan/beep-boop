@@ -10,6 +10,7 @@ on a per-exercise basis.
 """
 
 import base64
+import calendar
 import collections
 import contextlib
 import copy
@@ -36,10 +37,6 @@ CREATED_FIELD = 'created'
 EXERCISE_FIELD = 'customfield_10024'
 
 
-# We want location-agnostic calls, so we need to account for timezones
-LOCAL_GMT_OFFSET = time.mktime(time.gmtime(0))
-
-
 def _parse_time(s):
     """Convert a string of the form "YYYY-MM-DDTHH:MM:SS.000ZZZZZ" to time_t.
     """
@@ -47,11 +44,9 @@ def _parse_time(s):
     (yyyy, mm, dd, HH, MM, T) = (int(s[0:4]), int(s[5:7]), int(s[8:10]),
                                  int(s[11:13]), int(s[14:16]), int(s[23:26]))
 
-    # We want this to be the number of seconds since the epoch, so we have to
-    # add the timezone offset. Note that `mktime` returns local time, so we
-    # also have to get rid of any machine-specific offset.
-    offset = T * 60 * 60 + LOCAL_GMT_OFFSET
-    return time.mktime((yyyy, mm, dd, HH, MM, 0, 0, 0, -1)) - offset
+    # We do offset calculation ourselves: calcualte yyyy/mm/dd:HH:MM:00
+    # in gmt, and then adjust by the offset in T.
+    return calendar.timegm((yyyy, mm, dd, HH, MM, 0, 0, 0, -1)) - (T * 60 * 60)
 
 
 def get_ticket_data(start_time_t):
