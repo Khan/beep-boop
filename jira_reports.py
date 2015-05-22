@@ -98,7 +98,7 @@ def num_tickets_between(start_time_t, end_time_t):
             if ticket_time_t > end_time_t or ticket_time_t <= start_time_t:
                 continue
             # Exercise type comes as a list (should be a list of one item)
-            for exercise_type in ticket['fields'][EXERCISE_FIELD]:
+            for exercise_type in ticket['fields'][EXERCISE_FIELD] or []:
                 num_tickets[exercise_type] += 1
 
                 # See if we're the oldest ticket for this exercise
