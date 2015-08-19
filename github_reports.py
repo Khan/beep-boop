@@ -61,8 +61,8 @@ def get_errors(old_reports):
 
             if ((re.findall(
                     r'<(.*?)>; rel="(.*?)"',
-                    issue_data.info().getheader("Link"))[0][1] == "next")
-                    and not done):
+                    issue_data.info().getheader("Link"))[0][1] == "next") and
+                    not done):
                 get_issues(page + 1)
 
     get_issues(1)
@@ -90,7 +90,7 @@ def get_errors(old_reports):
         created_at = iso8601.parse_date(issue["created_at"])
         exercise = regex_matches[0]
 
-        if not exercise in stats:
+        if exercise not in stats:
             stats[exercise] = {}
             stats[exercise]["href"] = [issue["html_url"]]
 
@@ -101,14 +101,14 @@ def get_errors(old_reports):
             # two bugs in a very short timeframe, only count 1 -- the rest
             # are probably bogus
             if (not user_hash or not old_times or
-                 abs(created_at - old_times[-1]).total_seconds > WAIT_PERIOD):
+               abs(created_at - old_times[-1]).total_seconds > WAIT_PERIOD):
                 # We keep this list sorted so that we can more quickly
                 # look at the frequency with which a user submits messages
                 bisect.insort(old_times, created_at)
                 stats[exercise]["href"].append(issue["html_url"])
             else:
                 print ("Ignoring %s because user %s has posted too frequently"
-                        % (issue["html_url"], user_hash))
+                       % (issue["html_url"], user_hash))
 
             stats[exercise]["users"][user_hash] = old_times
 
@@ -189,12 +189,12 @@ def main():
                     " Reports: %s.  We saw %s in the last %s minutes,"
                     " while the mean indicates we should see around %s."
                     " Probability that this is abnormally elevated: %.4f."
-                        % (ex,
-                           generate_links(new_reports[ex]["href"]),
-                           util.thousand_commas(errors_this_period),
-                           util.thousand_commas(int(period_len / 60)),
-                           util.thousand_commas(round(mean, 2)),
-                           probability),
+                    % (ex,
+                       generate_links(new_reports[ex]["href"]),
+                       util.thousand_commas(errors_this_period),
+                       util.thousand_commas(int(period_len / 60)),
+                       util.thousand_commas(round(mean, 2)),
+                       probability),
                     room_id="Exercises")
         if "href" in new_reports[ex].keys():
             del new_reports[ex]["href"]  # don't need to keep the links around
@@ -207,5 +207,5 @@ def main():
 
     exercise_file.close()
 
-if  __name__ == "__main__":
+if __name__ == "__main__":
     main()

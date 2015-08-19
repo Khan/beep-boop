@@ -61,13 +61,7 @@ def thousand_commas(n):
     EX: thousand_commas(100000) = 100,000
         thousand_commas(1000000.0123) = 1,000,000.0123
     """
-    n = str(n)
-    n = n.split(".")  # Separate stuff after the decimal point
-
-    if len(n[0]) > 3:
-        n[0] = thousand_commas(n[0][:-3]) + "," + n[0][-3:]
-
-    return ".".join(n)
+    return '{:,}'.format(n)
 
 
 def merge_int_dicts(d1, d2):

@@ -102,7 +102,7 @@ def num_tickets_between(start_time_t, end_time_t):
                 num_tickets[exercise_type] += 1
 
                 # See if we're the oldest ticket for this exercise
-                if (not exercise_type in oldest_ticket_time_t or
+                if (exercise_type not in oldest_ticket_time_t or
                         oldest_ticket_time_t[exercise_type] > ticket_time_t):
                     oldest_ticket_time_t[exercise_type] = ticket_time_t
 
