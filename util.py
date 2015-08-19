@@ -78,3 +78,10 @@ def merge_int_dicts(d1, d2):
 def send_to_hipchat(message, room_id):
     alertlib.Alert(message, html=True, severity=logging.ERROR) \
         .send_to_hipchat(room_id, sender='beep-boop')
+
+
+def send_to_slack(message, channel):
+    alertlib.Alert(message, severity=logging.ERROR) \
+        .send_to_slack(channel, sender='beep-boop',
+                       icon_emoji=None,  # need to override default value
+                       icon_url='https://slack.global.ssl.fastly.net/9fa2/img/services/hubot_128.png')

@@ -166,6 +166,17 @@ def main():
                util.thousand_commas(round(mean, 2)),
                probability),
             room_id='1s and 0s')
+        util.send_to_slack(
+            "*Elevated bug report rate on <%s|Zendesk>*\n"
+            "We saw %s in the last %s minutes,"
+            " while the mean indicates we should see around %s."
+            " *Probability that this is abnormally elevated: %.4f.*"
+            % (url,
+               util.thousand_commas(num_new_tickets),
+               util.thousand_commas(int(time_this_period / 60)),
+               util.thousand_commas(round(mean, 2)),
+               probability),
+            channel='#1s-and-0s')
 
     new_data = {"elapsed_time": old_data["elapsed_time"] + time_this_period,
                 "ticket_count": old_data["ticket_count"] + num_new_tickets,

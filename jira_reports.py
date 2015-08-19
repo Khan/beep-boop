@@ -178,7 +178,18 @@ def main():
                    util.thousand_commas(int(time_this_period / 60)),
                    util.thousand_commas(round(mean, 2)),
                    probability),
-                room_id='jira-monitoring')
+                room_id='Support')
+            util.send_to_slack(
+                "*Elevated bug report rate on exercise `%s`*\n"
+                "We saw %s in the last %s minutes,"
+                " while the mean indicates we should see around %s."
+                " *Probability that this is abnormally elevated: %.4f.*"
+                % (exercise,
+                   util.thousand_commas(num_new_tickets_for_exercise),
+                   util.thousand_commas(int(time_this_period / 60)),
+                   util.thousand_commas(round(mean, 2)),
+                   probability),
+                channel='#support')
         elapsed_times[exercise] = time_last_period + time_this_period
 
     new_ticket_counts = util.merge_int_dicts(old_data['ticket_counts'],

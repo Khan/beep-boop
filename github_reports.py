@@ -139,14 +139,19 @@ def get_errors(old_reports):
     return old_reports
 
 
-def generate_links(links):
+def generate_hipchat_links(links):
     """Given a list of links, generate a string that can be inserted into
     a HipChat message with them."""
     html = []
     for i in xrange(len(links)):
         html.append("<a href='%s'>%d</a>" % (links[i], i + 1))
-
     return ", ".join(html)
+
+
+def generate_slack_links(links):
+    """Given a list of links, generate a string that can be inserted into
+    a Slack message with them."""
+    return ", ".join("<%s|%d>" % (el, idx + 1) for idx, el in enumerate(links))
 
 
 def main():
@@ -190,12 +195,24 @@ def main():
                     " while the mean indicates we should see around %s."
                     " Probability that this is abnormally elevated: %.4f."
                     % (ex,
-                       generate_links(new_reports[ex]["href"]),
+                       generate_hipchat_links(new_reports[ex]["href"]),
                        util.thousand_commas(errors_this_period),
                        util.thousand_commas(int(period_len / 60)),
                        util.thousand_commas(round(mean, 2)),
                        probability),
-                    room_id="Exercises")
+                    room_id="Support")
+                util.send_to_slack(
+                    "*Elevated exercise bug report rate in exercise `%s`\n"
+                    "Reports: %s.  We saw %s in the last %s minutes,"
+                    " while the mean indicates we should see around %s."
+                    " *Probability that this is abnormally elevated: %.4f.*"
+                    % (ex,
+                       generate_slack_links(new_reports[ex]["href"]),
+                       util.thousand_commas(errors_this_period),
+                       util.thousand_commas(int(period_len / 60)),
+                       util.thousand_commas(round(mean, 2)),
+                       probability),
+                    channel="#support")
         if "href" in new_reports[ex].keys():
             del new_reports[ex]["href"]  # don't need to keep the links around
 
