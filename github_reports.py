@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# Note: this script is deprecated and no longer runs in production!  Unsure
+# when it was originally taken out of production but confirmed in #support
+# chat room today. Leaving here for history / code re-use. -mroth 8/19/2015.
+
 import bisect
 import contextlib
 import copy

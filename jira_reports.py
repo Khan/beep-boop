@@ -178,7 +178,7 @@ def main():
                    util.thousand_commas(int(time_this_period / 60)),
                    util.thousand_commas(round(mean, 2)),
                    probability),
-                room_id='Support')
+                room_id='Content')
             util.send_to_slack(
                 "*Elevated bug report rate on exercise `%s`*\n"
                 "We saw %s in the last %s minutes,"
@@ -189,7 +189,7 @@ def main():
                    util.thousand_commas(int(time_this_period / 60)),
                    util.thousand_commas(round(mean, 2)),
                    probability),
-                channel='#support')
+                channel='#content')
         elapsed_times[exercise] = time_last_period + time_this_period
 
     new_ticket_counts = util.merge_int_dicts(old_data['ticket_counts'],

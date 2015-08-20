@@ -1,10 +1,10 @@
 beep-boop
 =========
 
-This script monitors our Zendesk, Jira and GitHub issues (Khan/khan-exercises)
-and notifies us in a HipChat room when the bug report rates are
-far enough above the mean rate to have a very high probability of
-being due to an abnormal event (think a newly introduced bug).
+This script monitors our Zendesk and Jira accounts and notifies us in a
+HipChat/Slack room when the bug report rates are far enough above the mean rate
+to have a very high probability of being due to an abnormal event (think a newly
+introduced bug).
 
 "Far enough above" is given by a Poisson distribution with a certain
 probability threshold -- if the probability of seeing at least this
