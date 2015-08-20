@@ -173,22 +173,26 @@ def main():
                 ' We saw %s in the last %s minutes,'
                 ' while the mean indicates we should see around %s.'
                 ' Probability that this is abnormally elevated: %.4f.'
+                ' Link: https://khanacademy.org/e/%s'
                 % (exercise,
                    util.thousand_commas(num_new_tickets_for_exercise),
                    util.thousand_commas(int(time_this_period / 60)),
                    util.thousand_commas(round(mean, 2)),
-                   probability),
+                   probability,
+                   exercise),
                 room_id='Content')
             util.send_to_slack(
                 "*Elevated bug report rate on exercise `%s`*\n"
                 "We saw %s in the last %s minutes,"
                 " while the mean indicates we should see around %s."
-                " *Probability that this is abnormally elevated: %.4f.*"
+                " *Probability that this is abnormally elevated: %.4f.*\n"
+                " Link: https://khanacademy.org/e/%s"
                 % (exercise,
                    util.thousand_commas(num_new_tickets_for_exercise),
                    util.thousand_commas(int(time_this_period / 60)),
                    util.thousand_commas(round(mean, 2)),
-                   probability),
+                   probability,
+                   exercise),
                 channel='#content')
         elapsed_times[exercise] = time_last_period + time_this_period
 
