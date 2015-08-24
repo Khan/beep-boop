@@ -168,35 +168,37 @@ def main():
 
         if (mean != 0 and probability > 0.9995 and
                 num_new_tickets_for_exercise > THRESHOLD):
+            quoted = urllib.quote(exercise.encode("utf-8"))
+            ka_url = "https://khanacademy.org/e/%s" % quoted
+            jira_url = "https://khanacademy.atlassian.net/browse/AI-941528?jql=Exercise%%20%%3D%%20%s" % quoted
             util.send_to_hipchat(
                 'Elevated bug report rate on exercise \'%s\'!'
                 ' We saw %s in the last %s minutes,'
                 ' while the mean indicates we should see around %s.'
                 ' Probability that this is abnormally elevated: %.4f.'
-                ' Link: https://khanacademy.org/e/%s.'
-                ' JIRA: https://khanacademy.atlassian.net/browse/AI-941528?jql=Exercise%%20%%3D%%20%s'
+                ' Links: <a href="%s">exercise on Khan Academy</a>,'
+                ' <a href="%s">JIRA tickets</a>'
                 % (exercise,
                    util.thousand_commas(num_new_tickets_for_exercise),
                    util.thousand_commas(int(time_this_period / 60)),
                    util.thousand_commas(round(mean, 2)),
                    probability,
-                   exercise,
-                   urllib.quote(exercise.encode("utf-8"))),
+                   ka_url,
+                   jira_url),
                 room_id='Content')
             util.send_to_slack(
                 "*Elevated bug report rate on exercise `%s`*\n"
                 "We saw %s in the last %s minutes,"
                 " while the mean indicates we should see around %s."
                 " *Probability that this is abnormally elevated: %.4f.*\n"
-                " Link: https://khanacademy.org/e/%s\n"
-                " JIRA: https://khanacademy.atlassian.net/browse/AI-941528?jql=Exercise%%20%%3D%%20%s"
+                " Links: <%s|exercise on Khan Academy>, <%s|JIRA tickets>."
                 % (exercise,
                    util.thousand_commas(num_new_tickets_for_exercise),
                    util.thousand_commas(int(time_this_period / 60)),
                    util.thousand_commas(round(mean, 2)),
                    probability,
-                   exercise,
-                   urllib.quote(exercise.encode("utf-8"))),
+                   ka_url,
+                   jira_url),
                 channel='#content')
         elapsed_times[exercise] = time_last_period + time_this_period
 
