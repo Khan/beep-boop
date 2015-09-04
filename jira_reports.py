@@ -185,7 +185,7 @@ def main():
                    probability,
                    ka_url,
                    jira_url),
-                room_id='Content')
+                room_id='Quetzalcoatl')
             util.send_to_slack(
                 "*Elevated bug report rate on exercise `%s`*\n"
                 "We saw %s in the last %s minutes,"
@@ -199,7 +199,7 @@ def main():
                    probability,
                    ka_url,
                    jira_url),
-                channel='#content')
+                channel='#quetzalcoatl')
         elapsed_times[exercise] = time_last_period + time_this_period
 
     new_ticket_counts = util.merge_int_dicts(old_data['ticket_counts'],
