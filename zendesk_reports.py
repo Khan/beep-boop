@@ -155,17 +155,6 @@ def main():
     if (mean != 0 and probability > 0.9995):
         # Too many errors!  Point people to the 'all tickets' filter.
         url = 'https://khanacademy.zendesk.com/agent/filters/37051364'
-        util.send_to_hipchat(
-            "Elevated bug report rate on <a href='%s'>Zendesk</a>!"
-            " We saw %s in the last %s minutes,"
-            " while the mean indicates we should see around %s."
-            " Probability that this is abnormally elevated: %.4f."
-            % (url,
-               util.thousand_commas(num_new_tickets),
-               util.thousand_commas(int(time_this_period / 60)),
-               util.thousand_commas(round(mean, 2)),
-               probability),
-            room_id='1s and 0s')
         util.send_to_slack(
             "*Elevated bug report rate on <%s|Zendesk>*\n"
             "We saw %s in the last %s minutes,"
