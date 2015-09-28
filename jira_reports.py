@@ -184,7 +184,7 @@ def main():
                    probability,
                    ka_url,
                    jira_url),
-                channel='#quetzalcoatl')
+                channel='#content-beep-boop')
         elapsed_times[exercise] = time_last_period + time_this_period
 
     new_ticket_counts = util.merge_int_dicts(old_data['ticket_counts'],
