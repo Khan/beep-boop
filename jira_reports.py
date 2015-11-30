@@ -12,10 +12,11 @@ on a per-exercise basis.
 import base64
 import calendar
 import collections
-import contextlib
 import copy
 import cPickle
+import httplib
 import json
+import socket
 import time
 import urllib
 import urllib2
@@ -80,8 +81,12 @@ def get_ticket_data(start_time_t):
     request.add_unredirected_header('Authorization',
                                     'Basic %s' % encoded_password)
     request.add_header('Content-Type', 'application/json')
-    with contextlib.closing(urllib2.urlopen(request)) as r:
-        return json.load(r)
+    urlfetch_errors = (socket.error, urllib2.HTTPError, httplib.HTTPException)
+
+    data = util.retry(lambda: urllib2.urlopen(request, timeout=60),
+                      'loading jira ticket data',
+                      lambda exc: isinstance(exc, urlfetch_errors))
+    return json.loads(data)
 
 
 def num_tickets_between(start_time_t, end_time_t):

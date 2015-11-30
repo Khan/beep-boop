@@ -12,8 +12,9 @@ we use the incremental API to get all tickets reported since last time.
 
 import base64
 import cPickle
-import contextlib
 import json
+import httplib
+import socket
 import time
 import urllib2
 
@@ -62,16 +63,18 @@ def get_ticket_data(start_time_t):
                                                             ZENDESK_PASSWORD))
     request.add_unredirected_header('Authorization',
                                     'Basic %s' % encoded_password)
-    try:
-        with contextlib.closing(urllib2.urlopen(request)) as r:
-            return json.load(r)
-    except urllib2.HTTPError, why:
-        if why.code == 429:            # quota limits, wait to try again
-            time.sleep(int(why.headers['Retry-After']))
-            with contextlib.closing(urllib2.urlopen(request)) as r:
-                return json.load(r)
-        else:
-            raise
+
+    def _should_retry(exc):
+        if isinstance(exc, urllib2.HTTPError) and exc.code == 429:
+            # quota limits: try again, but wait first.
+            time.sleep(int(exc.headers['Retry-After']))
+        return isinstance(exc, (socket.error, urllib2.HTTPError,
+                                httplib.HTTPException))
+
+    data = util.retry(lambda: urllib2.urlopen(request, timeout=60),
+                      'loading zendesk ticket data',
+                      _should_retry)
+    return json.loads(data)
 
 
 def num_tickets_between(start_time_t, end_time_t):

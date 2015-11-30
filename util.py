@@ -80,3 +80,23 @@ def send_to_slack(message, channel):
         .send_to_slack(channel, sender='beep-boop',
                        icon_emoji=None,  # need to override default value
                        icon_url='https://slack.global.ssl.fastly.net/9fa2/img/services/hubot_128.png')
+
+
+def retry(fn, description, should_retry_fn, retry_count=3):
+    """A simple retry function.
+
+    should_retry_fn is a function taking an exception (raised by fn)
+    and returning True if we should retry or False else.  Of course we
+    ignore should_retry_fn after retry_count retries.
+    """
+    for i in xrange(1, retry_count):
+        try:
+            return fn()
+        except Exception as why:
+            if should_retry_fn(why):
+                logging.debug('FAILED: %s (attempt %s, retrying)'
+                              % (description, i))
+            else:
+                raise
+    # Try one last time, which will just raise if it fails.
+    return fn()

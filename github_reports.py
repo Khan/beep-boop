@@ -5,11 +5,12 @@
 # chat room today. Leaving here for history / code re-use. -mroth 8/19/2015.
 
 import bisect
-import contextlib
 import copy
+import httplib
 import iso8601
 import json
 import re
+import socket
 import time
 import urllib2
 
@@ -41,33 +42,38 @@ def get_errors(old_reports):
     # Track the number of the first issue we find this time
     first_issue = [last_issue]  # Lets us modify this from within get_issues
 
+    urlfetch_errors = (socket.error, urllib2.HTTPError, httplib.HTTPException)
+
     def get_issues(page):
         url = ("https://api.github.com/repos/Khan/khan-exercises/issues"
                "?page=%d&per_page=100" % page)
-        with contextlib.closing(urllib2.urlopen(url)) as issue_data:
-            # This flag is False if we should continue to the next page of
-            # issues and True if we should stop looking at more pages.
-            done = False
-            for issue in json.loads(issue_data.read()):
-                if issue["user"]["login"] == "KhanBugz":
-                    if last_issue == -1:
-                        # If we have no data so far, only go one page.
-                        done = True
+        issue_data = util.retry(lambda: urllib2.urlopen(url, timeout=60),
+                                'fetching khan-exercises issues',
+                                lambda exc: isinstance(exc, urlfetch_errors))
 
-                    if issue["number"] > last_issue:
-                        first_issue[0] = max(first_issue[0], issue["number"])
-                        issues.append(issue)
-                    else:
-                        # If we've come to an issue we already saw,
-                        # don't continue to further pages or issues
-                        done = True
-                        break
+        # This flag is False if we should continue to the next page of
+        # issues and True if we should stop looking at more pages.
+        done = False
+        for issue in json.loads(issue_data.read()):
+            if issue["user"]["login"] == "KhanBugz":
+                if last_issue == -1:
+                    # If we have no data so far, only go one page.
+                    done = True
 
-            if ((re.findall(
-                    r'<(.*?)>; rel="(.*?)"',
-                    issue_data.info().getheader("Link"))[0][1] == "next") and
-                    not done):
-                get_issues(page + 1)
+                if issue["number"] > last_issue:
+                    first_issue[0] = max(first_issue[0], issue["number"])
+                    issues.append(issue)
+                else:
+                    # If we've come to an issue we already saw,
+                    # don't continue to further pages or issues
+                    done = True
+                    break
+
+        if ((re.findall(
+                r'<(.*?)>; rel="(.*?)"',
+                issue_data.info().getheader("Link"))[0][1] == "next") and
+                not done):
+            get_issues(page + 1)
 
     get_issues(1)
     first_issue = first_issue[0]
