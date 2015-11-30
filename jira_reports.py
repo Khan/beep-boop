@@ -86,7 +86,7 @@ def get_ticket_data(start_time_t):
     data = util.retry(lambda: urllib2.urlopen(request, timeout=60),
                       'loading jira ticket data',
                       lambda exc: isinstance(exc, urlfetch_errors))
-    return json.loads(data)
+    return json.load(data)
 
 
 def num_tickets_between(start_time_t, end_time_t):
