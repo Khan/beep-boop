@@ -18,6 +18,8 @@ import socket
 import time
 import urllib2
 
+import alertlib
+
 import util
 
 # In theory, you can use an API key to access zendesk data, but I
@@ -158,7 +160,7 @@ def main():
     if (mean != 0 and probability > 0.9995):
         # Too many errors!  Point people to the 'all tickets' filter.
         url = 'https://khanacademy.zendesk.com/agent/filters/37051364'
-        util.send_to_slack(
+        message = (
             "*Elevated bug report rate on <%s|Zendesk>*\n"
             "We saw %s in the last %s minutes,"
             " while the mean indicates we should see around %s."
@@ -167,8 +169,15 @@ def main():
                util.thousand_commas(num_new_tickets),
                util.thousand_commas(int(time_this_period / 60)),
                util.thousand_commas(round(mean, 2)),
-               probability),
-            channel='#1s-and-0s')
+               probability))
+        util.send_to_slack(message, channel='#1s-and-0s')
+
+        # Before we start texting people, make sure we've hit some totally
+        # arbitrary threshold.
+        # TODO(benkraft): we shouldn't need this -- improve our statistics so
+        # that we can make things less noisy in a nicer way.
+        if num_new_tickets > 25:
+            alertlib.Alert(message).send_to_pagerduty('beep-boop')
 
     new_data = {"elapsed_time": old_data["elapsed_time"] + time_this_period,
                 "ticket_count": old_data["ticket_count"] + num_new_tickets,
