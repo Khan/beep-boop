@@ -16,4 +16,6 @@ to import a file called `secrets.py` with the contents:
 
     slack_alertlib_webhook_url = "<slack url value>"
 
+The script runs as a cron job on toby; see the aws-config repo for the crontab.
+
 [alertlib]: https://github.com/khan/alertlib
