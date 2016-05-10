@@ -171,6 +171,7 @@ def main():
                util.thousand_commas(round(mean, 2)),
                probability))
         util.send_to_slack(message, channel='#1s-and-0s')
+        util.send_to_slack(message, channel='#volunteer-guides')
 
         # Before we start texting people, make sure we've hit some totally
         # arbitrary threshold.
