@@ -95,8 +95,8 @@ def num_tickets_between(start_time_t, end_time_t):
             break
 
         for ticket in ticket_data['results']:
-            # I'm guessing the bugs are in the 'Support' group.
-            if ticket['group_name'] != 'Support':
+            # we only care about technical issues
+            if 'technical_issue' not in ticket['current_tags']:
                 continue
 
             ticket_time_t = _parse_time(ticket['created_at'])
