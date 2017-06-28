@@ -18,8 +18,6 @@ import socket
 import time
 import urllib2
 
-import alertlib
-
 import util
 
 # In theory, you can use an API key to access zendesk data, but I
@@ -28,6 +26,11 @@ import util
 ZENDESK_USER = 'prod-read@khanacademy.org'
 ZENDESK_PASSWORD_FILE = util.relative_path("zendesk.cfg")
 ZENDESK_PASSWORD = None     # set lazily
+
+# This is the currently defined boundary for what is considered
+# 'significant' in number of new tickets. Used as threshold to determine
+# when to send an alert to Pagerduty.
+SIGNIFICANT_TICKET_COUNT = 25
 
 
 def _parse_time(s):
@@ -44,6 +47,7 @@ def _parse_time(s):
 
 
 def get_ticket_data(start_time_t):
+    """Given start_time to export from, call Zendesk API for ticket data."""
     global ZENDESK_PASSWORD
     if ZENDESK_PASSWORD is None:
         with open(ZENDESK_PASSWORD_FILE) as f:
@@ -76,6 +80,7 @@ def get_ticket_data(start_time_t):
     data = util.retry(lambda: urllib2.urlopen(request, timeout=60),
                       'loading zendesk ticket data',
                       _should_retry)
+
     return json.load(data)
 
 
@@ -84,7 +89,6 @@ def num_tickets_between(start_time_t, end_time_t):
 
     Also return the time of the oldest ticket seen, as a time_t, which
     is useful for getting an actual date-range when start_time is 0.
-
     """
     num_tickets = 0
     oldest_ticket_time_t = None
@@ -115,6 +119,44 @@ def num_tickets_between(start_time_t, end_time_t):
     return (num_tickets, oldest_ticket_time_t)
 
 
+def handle_alerts(num_new_tickets,
+                  time_this_period,
+                  mean,
+                  probability,
+                  start_time,
+                  end_time):
+    """Determine which alerts to send at various thresholds.
+
+    If probability of elevated ticket count is high, a notification
+    is sent to Slack and Alerta. A Pagerduty alert is only sent out
+    if a significantly elevated rate is detected.
+    """
+    if mean != 0 and probability > 0.9995:
+        # Too many errors!  Point people to the 'all tickets' filter.
+        url = 'https://khanacademy.zendesk.com/agent/filters/37051364'
+        message = (
+            "*Elevated bug report rate on <%s|Zendesk>*\n"
+            "We saw %s in the last %s minutes,"
+            " while the mean indicates we should see around %s."
+            " *Probability that this is abnormally elevated: %.4f.*"
+            % (url,
+               util.thousand_commas(num_new_tickets),
+               util.thousand_commas(int(time_this_period / 60)),
+               util.thousand_commas(round(mean, 2)),
+               probability))
+        util.send_to_slack(message, channel='#1s-and-0s')
+        util.send_to_slack(message, channel='#user-issues')
+        util.send_to_alerta(message, initiative='infrastructure')
+
+        # Before we start texting people, make sure we've hit higher threshold.
+        # TODO(benkraft/jacqueline): Potentially could base this off more
+        # historical data from analogous dow/time datapoints, but doesn't look
+        # like Zendesk API has a good way of doing this, running into request
+        # quota issues. Readdress this option if threshold is too noisy.
+        if num_new_tickets > SIGNIFICANT_TICKET_COUNT:
+            util.send_to_pagerduty(message, service='beep-boop')
+
+
 def main():
     try:
         zendesk_status_file = util.relative_path("zendesk")
@@ -134,56 +176,78 @@ def main():
     #
     # Zendesk seems to wait 5 minutes to update API data :-(, so we
     # ask for data that's a bit time-lagged
-    now = int(time.time()) - 300
+    end_time = int(time.time()) - 300
+    start_time = old_data['last_time_t']
+    
+    # Set flag to track if current time period is a weekend. Separate
+    # ticket_count/elapsed_time stats are kept for weekend vs. weekday
+    # to improve sensitivity to increases during low-traffic periods
+    is_weekend = time.localtime().tm_wday in [5, 6]
+
     (num_new_tickets, oldest_ticket_time_t) = num_tickets_between(
-        old_data["last_time_t"] or (now - 86400 * 7), now)
+        start_time or (end_time - 86400 * 7), end_time)
 
     # The first time we run this, we take the starting time to be the
     # time of the first bug report.
-    if old_data["last_time_t"] is None:
-        old_data["last_time_t"] = oldest_ticket_time_t
 
-    time_this_period = now - old_data["last_time_t"]
+    if start_time is None:
+        start_time = oldest_ticket_time_t
 
-    (mean, probability) = util.probability(old_data["ticket_count"],
-                                           old_data["elapsed_time"],
+    time_this_period = end_time - start_time
+
+    # To handle transition from unsegmented to segmented data, below sets
+    # the weekend data to 0 and shifts all historical data to the weekday
+    # data points. This will result in some inaccuracy, but the weekend
+    # data should skew the weekday data only negligably. May cause some
+    # skewed alerting during the transition period.
+    # TODO(jacqueline): Remove this transition code after August 2017
+    if 'elapsed_time' in old_data:
+        old_data['ticket_count_weekday'] = old_data['ticket_count']
+        old_data['ticket_count_weekend'] = 0
+        old_data['elapsed_time_weekday'] = old_data['elapsed_time']
+        old_data['elapsed_time_weekend'] = 0.0001
+
+    if is_weekend is True:
+        ticket_count = old_data['ticket_count_weekend']
+        elapsed_time = old_data['elapsed_time_weekend']
+    else:
+        ticket_count = old_data['ticket_count_weekday']
+        elapsed_time = old_data['elapsed_time_weekday']
+
+    (mean, probability) = util.probability(ticket_count,
+                                           elapsed_time,
                                            num_new_tickets,
                                            time_this_period)
 
     print ("%s] TOTAL %s/%ss; %s-: %s/%ss; m=%.3f p=%.3f"
            % (time.strftime("%Y-%m-%d %H:%M:%S %Z"),
-              old_data["ticket_count"], int(old_data["elapsed_time"]),
-              old_data["last_time_t"],
+              ticket_count, int(elapsed_time),
+              start_time,
               num_new_tickets, time_this_period,
               mean, probability))
 
-    if (mean != 0 and probability > 0.9995):
-        # Too many errors!  Point people to the 'all tickets' filter.
-        url = 'https://khanacademy.zendesk.com/agent/filters/37051364'
-        message = (
-            "*Elevated bug report rate on <%s|Zendesk>*\n"
-            "We saw %s in the last %s minutes,"
-            " while the mean indicates we should see around %s."
-            " *Probability that this is abnormally elevated: %.4f.*"
-            % (url,
-               util.thousand_commas(num_new_tickets),
-               util.thousand_commas(int(time_this_period / 60)),
-               util.thousand_commas(round(mean, 2)),
-               probability))
-        util.send_to_slack(message, channel='#1s-and-0s')
-        util.send_to_slack(message, channel='#user-issues')
+    handle_alerts(num_new_tickets, time_this_period, mean, probability,
+                  start_time, end_time)
 
-        # Before we start texting people, make sure we've hit some totally
-        # arbitrary threshold.
-        # TODO(benkraft): we shouldn't need this -- improve our statistics so
-        # that we can make things less noisy in a nicer way.
-        if num_new_tickets > 25:
-            alertlib.Alert(message).send_to_pagerduty('beep-boop')
+    if is_weekend is True:
+        new_data = {"elapsed_time_weekend": (
+                        old_data["elapsed_time_weekend"] + time_this_period),
+                    "ticket_count_weekend": (
+                        old_data["ticket_count_weekend"] + num_new_tickets),
+                    "elapsed_time_weekday": old_data["elapsed_time_weekday"],
+                    "ticket_count_weekday": old_data["ticket_count_weekday"],
+                    }
+    else:
+        new_data = {"elapsed_time_weekend": old_data["elapsed_time_weekend"],
+                    "ticket_count_weekend": old_data["ticket_count_weekend"],
+                    "elapsed_time_weekday": (
+                        old_data["elapsed_time_weekday"] + time_this_period),
+                    "ticket_count_weekday": (
+                        old_data["ticket_count_weekday"] + num_new_tickets),
+                    }
 
-    new_data = {"elapsed_time": old_data["elapsed_time"] + time_this_period,
-                "ticket_count": old_data["ticket_count"] + num_new_tickets,
-                "last_time_t": now,
-                }
+    new_data['last_time_t'] = end_time
+
     with open(zendesk_status_file, 'w') as f:
         cPickle.dump(new_data, f)
 

@@ -82,6 +82,17 @@ def send_to_slack(message, channel):
                        icon_url='https://slack.global.ssl.fastly.net/9fa2/img/services/hubot_128.png')
 
 
+def send_to_alerta(message, initiative):
+    alertlib.Alert(message, severity=logging.ERROR) \
+        .send_to_alerta(initiative,
+                        resource='webapp',
+                        event='Elevated Zendesk tickets')
+
+
+def send_to_pagerduty(message, service):
+    alertlib.Alert(message).send_to_pagerduty(service)
+
+
 def retry(fn, description, should_retry_fn, retry_count=3):
     """A simple retry function.
 
