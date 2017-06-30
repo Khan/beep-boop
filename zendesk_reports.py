@@ -29,8 +29,8 @@ ZENDESK_PASSWORD = None     # set lazily
 
 # This is the currently defined boundary for what is considered
 # 'significant' in number of new tickets. Used as threshold to determine
-# when to send an alert to Pagerduty.
-SIGNIFICANT_TICKET_COUNT = 25
+# when to send alerts.
+SIGNIFICANT_TICKET_COUNT = 5
 
 
 def _parse_time(s):
@@ -131,7 +131,12 @@ def handle_alerts(num_new_tickets,
     is sent to Slack and Alerta. A Pagerduty alert is only sent out
     if a significantly elevated rate is detected.
     """
-    if mean != 0 and probability > 0.9995:
+    # TODO(jacqueline): Including SIGNIFICANT_TICKET_COUNT hard
+    # threshold here so as to catch false positives, especially during
+    # transition. Maybe consider removing this once change in mean
+    # starts flattening out; August 2017?
+    if (mean != 0 and probability > 0.999 and
+            num_new_tickets >= SIGNIFICANT_TICKET_COUNT):
         # Too many errors!  Point people to the 'all tickets' filter.
         url = 'https://khanacademy.zendesk.com/agent/filters/37051364'
         message = (
@@ -153,7 +158,7 @@ def handle_alerts(num_new_tickets,
         # historical data from analogous dow/time datapoints, but doesn't look
         # like Zendesk API has a good way of doing this, running into request
         # quota issues. Readdress this option if threshold is too noisy.
-        if num_new_tickets > SIGNIFICANT_TICKET_COUNT:
+        if probability > 0.9995:
             util.send_to_pagerduty(message, service='beep-boop')
 
 
@@ -196,16 +201,17 @@ def main():
     time_this_period = end_time - start_time
 
     # To handle transition from unsegmented to segmented data, below sets
-    # the weekend data to 0 and shifts all historical data to the weekday
+    # the weekend data to mirror the stats from the past 4 months of logs
+    # to calculate a mean, and shifts all historical data to the weekday
     # data points. This will result in some inaccuracy, but the weekend
     # data should skew the weekday data only negligably. May cause some
     # skewed alerting during the transition period.
     # TODO(jacqueline): Remove this transition code after August 2017
     if 'elapsed_time' in old_data:
         old_data['ticket_count_weekday'] = old_data['ticket_count']
-        old_data['ticket_count_weekend'] = 0
+        old_data['ticket_count_weekend'] = 555
         old_data['elapsed_time_weekday'] = old_data['elapsed_time']
-        old_data['elapsed_time_weekend'] = 0.0001
+        old_data['elapsed_time_weekend'] = 2921756.0001
 
     if is_weekend is True:
         ticket_count = old_data['ticket_count_weekend']
