@@ -14,6 +14,7 @@ import base64
 import cPickle
 import json
 import httplib
+import logging
 import socket
 import time
 import urllib2
@@ -135,23 +136,25 @@ def handle_alerts(num_new_tickets,
     # threshold here so as to catch false positives, especially during
     # transition. Maybe consider removing this once change in mean
     # starts flattening out; August 2017?
-    if (mean != 0 and probability > 0.999 and
-            num_new_tickets >= SIGNIFICANT_TICKET_COUNT):
-        # Too many errors!  Point people to the 'all tickets' filter.
-        url = 'https://khanacademy.zendesk.com/agent/filters/37051364'
-        message = (
-            "*Elevated bug report rate on <%s|Zendesk>*\n"
+    url = 'https://khanacademy.zendesk.com/agent/filters/37051364'
+    message = (
             "We saw %s in the last %s minutes,"
             " while the mean indicates we should see around %s."
             " *Probability that this is abnormally elevated: %.4f.*"
-            % (url,
-               util.thousand_commas(num_new_tickets),
+            % (util.thousand_commas(num_new_tickets),
                util.thousand_commas(int(time_this_period / 60)),
                util.thousand_commas(round(mean, 2)),
                probability))
+
+    if (mean != 0 and probability > 0.999 and
+            num_new_tickets >= SIGNIFICANT_TICKET_COUNT):
+        # Too many errors!  Point people to the 'all tickets' filter.
+        message = ("*Elevated bug report rate on <%s|Zendesk>*\n"
+                   % url + message)
+
         util.send_to_slack(message, channel='#1s-and-0s')
         util.send_to_slack(message, channel='#user-issues')
-        util.send_to_alerta(message, initiative='infrastructure')
+        util.send_to_alerta(message, severity=logging.ERROR)
 
         # Before we start texting people, make sure we've hit higher threshold.
         # TODO(benkraft/jacqueline): Potentially could base this off more
@@ -160,6 +163,12 @@ def handle_alerts(num_new_tickets,
         # quota issues. Readdress this option if threshold is too noisy.
         if probability > 0.9995:
             util.send_to_pagerduty(message, service='beep-boop')
+    else:
+        # If ticket rate is normal, still send alert to alerta to resolve any
+        # prior existing alerts.
+        message = ("Normal bug report rate on <%s|Zendesk>\n"
+                   % url + message)
+        util.send_to_alerta(message, severity=logging.INFO)
 
 
 def main():
