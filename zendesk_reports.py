@@ -168,7 +168,7 @@ def handle_alerts(num_new_tickets,
         # prior existing alerts.
         message = ("Normal bug report rate on <%s|Zendesk>\n"
                    % url + message)
-        util.send_to_alerta(message, severity=logging.INFO)
+        util.send_to_alerta(message, severity=logging.INFO, mark_resolved=True)
 
 
 def main():
