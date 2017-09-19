@@ -12,6 +12,7 @@ we use the incremental API to get all tickets reported since last time.
 
 import base64
 import cPickle
+import datetime
 import json
 import httplib
 import logging
@@ -171,6 +172,30 @@ def handle_alerts(num_new_tickets,
         util.send_to_alerta(message, severity=logging.INFO, mark_resolved=True)
 
 
+def _is_off_hours(dt):
+    """Returns whether we consider this time to be "off hours".
+
+    We consider weekends and evenings to be off-hours, and track separate
+    metrics for them, so that we aren't oversensitive during the weekday and
+    undersensitive otherwise.
+
+    Arguments: dt should be a datetime.datetime object, in Pacific Time (PDT or
+    PST, whichever is currently active).
+
+    TODO(benkraft): Something smarter and more adaptive to what the real data
+    looks like.
+    """
+    if dt.weekday() in [5, 6]:
+        return True
+    # These times were chosen by the very precise method of "eyeballing it" on
+    # number of tickets per hour in the week I happened to look.  We follow US
+    # Daylight Savings Time because we figure that's where most users are.
+    elif 6 <= dt.hour <= 19:
+        return False
+    else:
+        return True
+
+
 def main():
     try:
         zendesk_status_file = util.relative_path("zendesk")
@@ -192,11 +217,11 @@ def main():
     # ask for data that's a bit time-lagged
     end_time = int(time.time()) - 300
     start_time = old_data['last_time_t']
-    
+
     # Set flag to track if current time period is a weekend. Separate
     # ticket_count/elapsed_time stats are kept for weekend vs. weekday
     # to improve sensitivity to increases during low-traffic periods
-    is_weekend = time.localtime().tm_wday in [5, 6]
+    is_off_hours = _is_off_hours(datetime.datetime.fromtimestamp(end_time))
 
     (num_new_tickets, oldest_ticket_time_t) = num_tickets_between(
         start_time or (end_time - 86400 * 7), end_time)
@@ -209,20 +234,9 @@ def main():
 
     time_this_period = end_time - start_time
 
-    # To handle transition from unsegmented to segmented data, below sets
-    # the weekend data to mirror the stats from the past 4 months of logs
-    # to calculate a mean, and shifts all historical data to the weekday
-    # data points. This will result in some inaccuracy, but the weekend
-    # data should skew the weekday data only negligably. May cause some
-    # skewed alerting during the transition period.
-    # TODO(jacqueline): Remove this transition code after August 2017
-    if 'elapsed_time' in old_data:
-        old_data['ticket_count_weekday'] = old_data['ticket_count']
-        old_data['ticket_count_weekend'] = 555
-        old_data['elapsed_time_weekday'] = old_data['elapsed_time']
-        old_data['elapsed_time_weekend'] = 2921756.0001
-
-    if is_weekend is True:
+    if is_off_hours:
+        # To simplify backcompat we still use "weekend" and "weekday" in the
+        # saved data; really they mean "on hours" and "off hours" now.
         ticket_count = old_data['ticket_count_weekend']
         elapsed_time = old_data['elapsed_time_weekend']
     else:
@@ -244,7 +258,7 @@ def main():
     handle_alerts(num_new_tickets, time_this_period, mean, probability,
                   start_time, end_time)
 
-    if is_weekend is True:
+    if is_off_hours:
         new_data = {"elapsed_time_weekend": (
                         old_data["elapsed_time_weekend"] + time_this_period),
                     "ticket_count_weekend": (
