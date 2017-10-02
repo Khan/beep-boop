@@ -32,7 +32,7 @@ def poisson_cdf(actual, mean):
     if actual < 0:
         return decimal.Decimal(0)
 
-    if isinstance(mean, (float, int)):
+    if isinstance(mean, float):
         mean = decimal.Decimal(mean)
 
     cum_prob = decimal.Decimal(0)
