@@ -16,7 +16,7 @@ def probability(past_errors,
     an abnormally elevated rate of reports,
     as well as the mean (for displaying to users).
     """
-    mean = (past_errors / past_time) * time_this_period
+    mean = (past_errors * 1.0 / past_time) * time_this_period
     return (mean, poisson_cdf(errors_this_period - 1, mean))
 
 
@@ -32,7 +32,7 @@ def poisson_cdf(actual, mean):
     if actual < 0:
         return decimal.Decimal(0)
 
-    if isinstance(mean, float):
+    if isinstance(mean, (float, int)):
         mean = decimal.Decimal(mean)
 
     cum_prob = decimal.Decimal(0)
