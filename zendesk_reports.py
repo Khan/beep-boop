@@ -105,6 +105,11 @@ def num_tickets_between(start_time_t, end_time_t):
             if 'technical_issue' not in ticket['current_tags']:
                 continue
 
+            # Skip tickets created by user-support, since they are
+            # submitted in batches and cause false alarms
+            if 'Request created from:' in ticket['subject']:
+                continue
+
             ticket_time_t = _parse_time(ticket['created_at'])
             if ticket_time_t > end_time_t or ticket_time_t <= start_time_t:
                 continue
