@@ -155,7 +155,7 @@ def handle_alerts(num_new_tickets,
     if (mean != 0 and probability > 0.999 and
             num_new_tickets >= SIGNIFICANT_TICKET_COUNT):
         # Too many errors!  Point people to the 'all tickets' filter.
-        message = ("*Elevated bug report rate on <%s|Zendesk>*\n"
+        message = ("Elevated Zendesk report rate (#zendesk-tickets)\n"
                    % url + message)
 
         util.send_to_slack(message, channel='#1s-and-0s')
