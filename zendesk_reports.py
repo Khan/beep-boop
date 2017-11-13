@@ -142,7 +142,6 @@ def handle_alerts(num_new_tickets,
     # threshold here so as to catch false positives, especially during
     # transition. Maybe consider removing this once change in mean
     # starts flattening out; August 2017?
-    url = 'https://khanacademy.zendesk.com/agent/filters/37051364'
     message = (
             "We saw %s in the last %s minutes,"
             " while the mean indicates we should see around %s."
@@ -154,9 +153,8 @@ def handle_alerts(num_new_tickets,
 
     if (mean != 0 and probability > 0.999 and
             num_new_tickets >= SIGNIFICANT_TICKET_COUNT):
-        # Too many errors!  Point people to the 'all tickets' filter.
-        message = ("Elevated Zendesk report rate (#zendesk-tickets)\n"
-                   % url + message)
+        # Too many errors!  Point people to the slack channel.
+        message = "Elevated Zendesk report rate (#zendesk-tickets)\n" + message
 
         util.send_to_slack(message, channel='#1s-and-0s')
         util.send_to_slack(message, channel='#user-issues')
@@ -172,8 +170,7 @@ def handle_alerts(num_new_tickets,
     else:
         # If ticket rate is normal, still send alert to alerta to resolve any
         # prior existing alerts.
-        message = ("Normal bug report rate on <%s|Zendesk>\n"
-                   % url + message)
+        message = "Normal Zendesk report rate (#zendesk-tickets)\n" + message
         util.send_to_alerta(message, severity=logging.INFO, mark_resolved=True)
 
 
