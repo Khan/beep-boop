@@ -204,9 +204,12 @@ def main():
         with open(zendesk_status_file) as f:
             old_data = cPickle.load(f)
     except IOError:
-        old_data = {"elapsed_time": 0.0001,   # avoid a divide-by-0
-                    "ticket_count": 0,
-                    "last_time_t": None,
+        old_data = {"elapsed_time_weekday": 0.0001,   # avoid a divide-by-0
+                    "elapsed_time_weekend": 0.0001,   # avoid a divide-by-0
+                    "ticket_count_weekday": 0,
+                    "ticket_count_weekend": 0,
+                    "last_time_t_weekday": None,
+                    "last_time_t_weekend": None,
                     }
 
     # We compare the number of tickets in the last few minutes against
