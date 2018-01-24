@@ -154,7 +154,8 @@ def handle_alerts(num_new_tickets,
     if (mean != 0 and probability > 0.999 and
             num_new_tickets >= SIGNIFICANT_TICKET_COUNT):
         # Too many errors!  Point people to the slack channel.
-        message = "Elevated Zendesk report rate (#zendesk-tickets)\n" + message
+        message = ("Elevated Zendesk report rate (#zendesk-technical)\n"
+                   + message)
 
         util.send_to_slack(message, channel='#1s-and-0s')
         util.send_to_slack(message, channel='#user-issues')
@@ -170,7 +171,7 @@ def handle_alerts(num_new_tickets,
     else:
         # If ticket rate is normal, still send alert to alerta to resolve any
         # prior existing alerts.
-        message = "Normal Zendesk report rate (#zendesk-tickets)\n" + message
+        message = "Normal Zendesk report rate (#zendesk-technical)\n" + message
         util.send_to_alerta(message, severity=logging.INFO, mark_resolved=True)
 
 
