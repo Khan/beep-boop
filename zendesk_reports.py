@@ -34,6 +34,9 @@ ZENDESK_PASSWORD = None     # set lazily
 # when to send alerts.
 SIGNIFICANT_TICKET_COUNT = 5
 
+# We have a higher ticket boundary for paging someone.
+MIN_TICKET_COUNT_TO_PAGE_SOMEONE = 7
+
 
 def _parse_time(s):
     """Convert a string of the form "YYYY-MM-DD HH:MM:SS -0700" to time_t.
@@ -166,7 +169,8 @@ def handle_alerts(num_new_tickets,
         # historical data from analogous dow/time datapoints, but doesn't look
         # like Zendesk API has a good way of doing this, running into request
         # quota issues. Readdress this option if threshold is too noisy.
-        if probability > 0.9995:
+        if (probability > 0.9995 and
+                num_new_tickets >= MIN_TICKET_COUNT_TO_PAGE_SOMEONE):
             util.send_to_pagerduty(message, service='beep-boop')
     else:
         # If ticket rate is normal, still send alert to alerta to resolve any
