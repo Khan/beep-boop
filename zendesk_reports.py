@@ -89,13 +89,13 @@ def get_ticket_data(start_time_t):
     return json.load(data)
 
 
-def num_tickets_between(start_time_t, end_time_t):
+def get_tickets_between(start_time_t, end_time_t):
     """Return the number of tickets created between start and end time.
 
     Also return the time of the oldest ticket seen, as a time_t, which
     is useful for getting an actual date-range when start_time is 0.
     """
-    num_tickets = 0
+    tickets = []
     oldest_ticket_time_t = None
 
     while start_time_t < end_time_t:
@@ -116,7 +116,7 @@ def num_tickets_between(start_time_t, end_time_t):
             ticket_time_t = _parse_time(ticket['created_at'])
             if ticket_time_t > end_time_t or ticket_time_t <= start_time_t:
                 continue
-            num_tickets += 1
+            tickets += [ticket]
             # See if we're the oldest ticket
             if (oldest_ticket_time_t is None or
                     oldest_ticket_time_t > ticket_time_t):
@@ -126,10 +126,14 @@ def num_tickets_between(start_time_t, end_time_t):
             break
         start_time_t = ticket_data['end_time']
 
-    return (num_tickets, oldest_ticket_time_t)
+    # Sort tickets in order by date to make things easier later
+    tickets = sorted(tickets,
+                     key=lambda ticket: _parse_time(ticket["created_at"]))
+
+    return (tickets, oldest_ticket_time_t)
 
 
-def handle_alerts(num_new_tickets,
+def handle_alerts(new_tickets,
                   time_this_period,
                   mean,
                   probability,
@@ -145,6 +149,7 @@ def handle_alerts(num_new_tickets,
     # threshold here so as to catch false positives, especially during
     # transition. Maybe consider removing this once change in mean
     # starts flattening out; August 2017?
+    num_new_tickets = len(new_tickets)
     message = (
             "We saw %s in the last %s minutes,"
             " while the mean indicates we should see around %s."
@@ -160,8 +165,20 @@ def handle_alerts(num_new_tickets,
         message = ("Elevated Zendesk report rate (#zendesk-technical)\n"
                    + message)
 
-        util.send_to_slack(message, channel='#1s-and-0s')
-        util.send_to_slack(message, channel='#user-issues')
+        # Generated a list of tickets that we will send to Slack along with the
+        # original message
+        ticket_list = '\n```'
+        for ticket in new_tickets:
+            created_at = _parse_time(ticket['created_at'])
+            created_at = datetime.datetime.fromtimestamp(created_at)
+            ticket_list += "\n[%s][Ticket #%d]: %s" % (
+                created_at.strftime("%I:%M %p"),
+                ticket['id'],
+                ticket['subject'])
+        ticket_list += '\n```'
+
+        util.send_to_slack(message + ticket_list, channel='#1s-and-0s')
+        util.send_to_slack(message + ticket_list, channel='#user-issues')
         util.send_to_alerta(message, severity=logging.ERROR)
 
         # Before we start texting people, make sure we've hit higher threshold.
@@ -213,6 +230,7 @@ def main():
                     "elapsed_time_weekend": 0.0001,   # avoid a divide-by-0
                     "ticket_count_weekday": 0,
                     "ticket_count_weekend": 0,
+                    "last_time_t": None,
                     "last_time_t_weekday": None,
                     "last_time_t_weekend": None,
                     }
@@ -233,8 +251,9 @@ def main():
     # to improve sensitivity to increases during low-traffic periods
     is_off_hours = _is_off_hours(datetime.datetime.fromtimestamp(end_time))
 
-    (num_new_tickets, oldest_ticket_time_t) = num_tickets_between(
+    (new_tickets, oldest_ticket_time_t) = get_tickets_between(
         start_time or (end_time - 86400 * 7), end_time)
+    num_new_tickets = len(new_tickets)
 
     # The first time we run this, we take the starting time to be the
     # time of the first bug report.
@@ -265,7 +284,7 @@ def main():
               num_new_tickets, time_this_period,
               mean, probability))
 
-    handle_alerts(num_new_tickets, time_this_period, mean, probability,
+    handle_alerts(new_tickets, time_this_period, mean, probability,
                   start_time, end_time)
 
     if is_off_hours:
