@@ -109,6 +109,11 @@ def get_tickets_between(start_time_t, end_time_t):
             if 'technical_issue' not in ticket['current_tags']:
                 continue
 
+            # Ignore translation advocate tickets. They can be used
+            # for testing and don't indicate a user-visible problem.
+            if 'translation_advocate' in ticket['current_tags']:
+                continue
+
             # Skip tickets created by user-support, since they are
             # submitted in batches and cause false alarms
             if 'Request created from:' in ticket['subject']:
