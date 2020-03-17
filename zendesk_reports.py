@@ -36,7 +36,9 @@ ZENDESK_PASSWORD = None     # set lazily
 SIGNIFICANT_TICKET_COUNT = 5
 
 # We have a higher ticket boundary for paging someone.
-MIN_TICKET_COUNT_TO_PAGE_SOMEONE = 7
+# TODO (Boris, INFRA-4451) current False Positive max is around 17
+# MIN_TICKET_COUNT_TO_PAGE_SOMEONE = 7
+CAUTIOUS_MIN_TICKET_COUNT_TO_PAGE_SOMEONE = 25
 
 
 def _parse_time(s):
@@ -157,13 +159,13 @@ def handle_alerts(new_tickets,
     # starts flattening out; August 2017?
     num_new_tickets = len(new_tickets)
     message = (
-            "We saw %s in the last %s minutes,"
-            " while the mean indicates we should see around %s."
-            " *Probability that this is abnormally elevated: %.4f.*"
-            % (util.thousand_commas(num_new_tickets),
-               util.thousand_commas(int(time_this_period / 60)),
-               util.thousand_commas(round(mean, 2)),
-               probability))
+        "We saw %s in the last %s minutes,"
+        " while the mean indicates we should see around %s."
+        " *Probability that this is abnormally elevated: %.4f.*"
+        % (util.thousand_commas(num_new_tickets),
+           util.thousand_commas(int(time_this_period / 60)),
+           util.thousand_commas(round(mean, 2)),
+           probability))
 
     if (mean != 0 and probability > 0.999 and
             num_new_tickets >= SIGNIFICANT_TICKET_COUNT):
@@ -183,9 +185,12 @@ def handle_alerts(new_tickets,
                 # Strip any non-safe characters from the subject line
                 re.sub(r"[^\w\-\.'%&:,\[\]/\\\(\)\" ]", '', ticket['subject']))
 
-        util.send_to_slack(message + ticket_list, channel='#1s-and-0s')
-        util.send_to_slack(message + ticket_list, channel='#user-issues')
-        util.send_to_alerta(message, severity=logging.ERROR)
+        logging.warning("Sending message: {}".format(message))
+        # TODO (Boris, INFRA-4451): Re-evaluate if we want to alert the team
+        #    We will still send to alerta, and create pager duty if number
+        #    of tickets are *abnormally* high
+        util.send_to_slack(message + ticket_list,
+                           channel='#infrastructure-sre')
 
         # Before we start texting people, make sure we've hit higher threshold.
         # TODO(benkraft/jacqueline): Potentially could base this off more
@@ -193,7 +198,10 @@ def handle_alerts(new_tickets,
         # like Zendesk API has a good way of doing this, running into request
         # quota issues. Readdress this option if threshold is too noisy.
         if (probability > 0.9995 and
-                num_new_tickets >= MIN_TICKET_COUNT_TO_PAGE_SOMEONE):
+                num_new_tickets >= CAUTIOUS_MIN_TICKET_COUNT_TO_PAGE_SOMEONE):
+            util.send_to_slack(message + ticket_list, channel='#1s-and-0s')
+            util.send_to_slack(message + ticket_list, channel='#user-issues')
+            util.send_to_alerta(message, severity=logging.ERROR)
             util.send_to_pagerduty(message, service='beep-boop')
     else:
         # If ticket rate is normal, still send alert to alerta to resolve any
@@ -295,12 +303,12 @@ def main():
 
     if is_off_hours:
         new_data = {"elapsed_time_weekend": (
-                        old_data["elapsed_time_weekend"] + time_this_period),
-                    "ticket_count_weekend": (
-                        old_data["ticket_count_weekend"] + num_new_tickets),
-                    "elapsed_time_weekday": old_data["elapsed_time_weekday"],
-                    "ticket_count_weekday": old_data["ticket_count_weekday"],
-                    }
+            old_data["elapsed_time_weekend"] + time_this_period),
+            "ticket_count_weekend": (
+            old_data["ticket_count_weekend"] + num_new_tickets),
+            "elapsed_time_weekday": old_data["elapsed_time_weekday"],
+            "ticket_count_weekday": old_data["ticket_count_weekday"],
+        }
     else:
         new_data = {"elapsed_time_weekend": old_data["elapsed_time_weekend"],
                     "ticket_count_weekend": old_data["ticket_count_weekend"],
