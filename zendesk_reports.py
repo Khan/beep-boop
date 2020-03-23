@@ -8,6 +8,13 @@ page, and then UserVoice, we now use Zendesk:
 
 Zendesk supports an API for getting all the tickets ever opened, but
 we use the incremental API to get all tickets reported since last time.
+
+In case of sudden surge / decrease in traffic, you can reset the mean using:
+
+  ./sendesk_reports.py --reset_weekend <X1> --reset_weekday <X2>
+
+Where the expected value can be obtained by looking at previous alerts to
+establish a sensible value.
 """
 
 import base64
@@ -20,6 +27,7 @@ import re
 import socket
 import time
 import urllib2
+import argparse
 
 import util
 
@@ -324,5 +332,52 @@ def main():
         cPickle.dump(new_data, f)
 
 
+def reset_mean(weekday_mean=None, weekend_mean=None):
+    zendesk_status_file = util.relative_path("zendesk")
+    try:
+        with open(zendesk_status_file) as f:
+            data = cPickle.load(f)
+    except (IOError, EOFError):
+        data = {"elapsed_time_weekday": 0.0001,   # avoid a divide-by-0
+                "elapsed_time_weekend": 0.0001,   # avoid a divide-by-0
+                "ticket_count_weekday": 0,
+                "ticket_count_weekend": 0,
+                "last_time_t": None,
+                "last_time_t_weekday": None,
+                "last_time_t_weekend": None,
+                }
+
+    if weekday_mean is not None:
+        # Note: on python 2.7
+        print "Resetting from weekday from {} to {}".format(
+            1.0 * data['ticket_count_weekday'] / data['elapsed_time_weekday'],
+            weekday_mean
+        )
+        data['ticket_count_weekday'] = weekday_mean * \
+            data['elapsed_time_weekday']
+
+    if weekend_mean is not None:
+        print "Resetting from weekend from {} to {}".format(
+            1.0 * data['ticket_count_weekend'] / data['elapsed_time_weekend'],
+            weekend_mean
+        )
+        data['ticket_count_weekend'] = weekend_mean * \
+            data['elapsed_time_weekend']
+
+    with open(zendesk_status_file, 'w') as f:
+        cPickle.dump(data, f)
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Script to predict abnormal zendesk alerts.'
+    )
+    parser.add_argument('--reset_weekday', type=int,
+                        help='Hard reset weekday mean to expected value.')
+    parser.add_argument('--reset_weekend', type=int,
+                        help='Hard reset weekend mean to expected value.')
+    args = parser.parse_args()
+    if (args.reset_weekday is not None) or (args.reset_weekend is not None):
+        reset_mean(args.reset_weekday, args.reset_weekend)
+
     main()
