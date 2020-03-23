@@ -349,18 +349,18 @@ def reset_mean(weekday_mean=None, weekend_mean=None):
 
     if weekday_mean is not None:
         # Note: on python 2.7
-        print ("Resetting from weekday from {} to {}".format(
+        print "Resetting from weekday from {} to {}".format(
             1.0 * data['ticket_count_weekday'] / data['elapsed_time_weekday'],
             weekday_mean
-        ))
+        )
         data['ticket_count_weekday'] = weekday_mean * \
             data['elapsed_time_weekday']
 
     if weekend_mean is not None:
-        print ("Resetting from weekend from {} to {}".format(
+        print "Resetting from weekend from {} to {}".format(
             1.0 * data['ticket_count_weekend'] / data['elapsed_time_weekend'],
             weekend_mean
-        ))
+        )
         data['ticket_count_weekend'] = weekend_mean * \
             data['elapsed_time_weekend']
 
