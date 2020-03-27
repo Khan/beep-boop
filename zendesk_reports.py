@@ -199,6 +199,11 @@ def handle_alerts(new_tickets,
         #    of tickets are *abnormally* high
         util.send_to_slack(message + ticket_list,
                            channel='#infrastructure-sre')
+        # TODO (Boris, INFRA-4451) At Laurie's request
+        # https://khanacademy.slack.com/archives/C8XGW76FQ/p1585321100055200?thread_ts=1585320913.054500&cid=C8XGW76FQ
+        # we have allowed noisy alerts to go to #user-issues
+        # we should restore this back to list below once we have confidence.
+        util.send_to_slack(message + ticket_list, channel='#user-issues')
 
         # Before we start texting people, make sure we've hit higher threshold.
         # TODO(benkraft/jacqueline): Potentially could base this off more
@@ -208,7 +213,6 @@ def handle_alerts(new_tickets,
         if (probability > 0.9995 and
                 num_new_tickets >= CAUTIOUS_MIN_TICKET_COUNT_TO_PAGE_SOMEONE):
             util.send_to_slack(message + ticket_list, channel='#1s-and-0s')
-            util.send_to_slack(message + ticket_list, channel='#user-issues')
             util.send_to_alerta(message, severity=logging.ERROR)
             util.send_to_pagerduty(message, service='beep-boop')
     else:
