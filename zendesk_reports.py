@@ -44,9 +44,7 @@ ZENDESK_PASSWORD = None     # set lazily
 SIGNIFICANT_TICKET_COUNT = 5
 
 # We have a higher ticket boundary for paging someone.
-# TODO (Boris, INFRA-4451) current False Positive max is around 17
-# MIN_TICKET_COUNT_TO_PAGE_SOMEONE = 7
-CAUTIOUS_MIN_TICKET_COUNT_TO_PAGE_SOMEONE = 25
+MIN_TICKET_COUNT_TO_PAGE_SOMEONE = 7
 
 
 def _parse_time(s):
@@ -211,7 +209,7 @@ def handle_alerts(new_tickets,
         # like Zendesk API has a good way of doing this, running into request
         # quota issues. Readdress this option if threshold is too noisy.
         if (probability > 0.9995 and
-                num_new_tickets >= CAUTIOUS_MIN_TICKET_COUNT_TO_PAGE_SOMEONE):
+                num_new_tickets >= MIN_TICKET_COUNT_TO_PAGE_SOMEONE):
             util.send_to_slack(message + ticket_list, channel='#1s-and-0s')
             util.send_to_alerta(message, severity=logging.ERROR)
             util.send_to_pagerduty(message, service='beep-boop')
