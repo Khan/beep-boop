@@ -82,14 +82,6 @@ def send_to_slack(message, channel):
                        icon_url='https://slack.global.ssl.fastly.net/9fa2/img/services/hubot_128.png')
 
 
-def send_to_alerta(message, severity, mark_resolved=False):
-    alertlib.Alert(message, severity=severity) \
-        .send_to_alerta(initiative='infrastructure',
-                        resource='webapp',
-                        event='Elevated Zendesk tickets',
-                        resolve=mark_resolved)
-
-
 def send_to_pagerduty(message, service):
     alertlib.Alert(message).send_to_pagerduty(service)
 
