@@ -156,7 +156,7 @@ def handle_alerts(new_tickets,
     """Determine which alerts to send at various thresholds.
 
     If probability of elevated ticket count is high, a notification
-    is sent to Slack and Alerta. A Pagerduty alert is only sent out
+    is sent to Slack. A Pagerduty alert is only sent out
     if a significantly elevated rate is detected.
     """
     # TODO(jacqueline): Including SIGNIFICANT_TICKET_COUNT hard
@@ -193,7 +193,7 @@ def handle_alerts(new_tickets,
 
         logging.warning("Sending message: {}".format(message))
         # TODO (Boris, INFRA-4451): Re-evaluate if we want to alert the team
-        #    We will still send to alerta, and create pager duty if number
+        #    We will still send to slack, and create pager duty if number
         #    of tickets are *abnormally* high
         util.send_to_slack(message + ticket_list,
                            channel='#infrastructure-sre')
@@ -211,13 +211,7 @@ def handle_alerts(new_tickets,
         if (probability > 0.9995 and
                 num_new_tickets >= MIN_TICKET_COUNT_TO_PAGE_SOMEONE):
             util.send_to_slack(message + ticket_list, channel='#1s-and-0s')
-            util.send_to_alerta(message, severity=logging.ERROR)
             util.send_to_pagerduty(message, service='beep-boop')
-    else:
-        # If ticket rate is normal, still send alert to alerta to resolve any
-        # prior existing alerts.
-        message = "Normal Zendesk report rate (#zendesk-technical)\n" + message
-        util.send_to_alerta(message, severity=logging.INFO, mark_resolved=True)
 
 
 def _is_off_hours(dt):
