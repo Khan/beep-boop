@@ -122,6 +122,10 @@ def get_tickets_between(start_time_t, end_time_t):
             if 'translation_advocate' in ticket['current_tags']:
                 continue
 
+            # We dont care about spam and dont want them to trigger alert
+            if 'spam' in ticket['current_tags']:
+                continue
+
             # Skip tickets created by user-support, since they are
             # submitted in batches and cause false alarms
             if 'Request created from:' in ticket['subject']:
