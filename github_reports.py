@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Note: this script is deprecated and no longer runs in production!  Unsure
 # when it was originally taken out of production but confirmed in #support
@@ -6,13 +6,14 @@
 
 import bisect
 import copy
-import httplib
+import http.client
 import iso8601
 import json
 import re
 import socket
 import time
-import urllib2
+import urllib.error
+import urllib.request
 
 import util
 
@@ -42,14 +43,16 @@ def get_errors(old_reports):
     # Track the number of the first issue we find this time
     first_issue = [last_issue]  # Lets us modify this from within get_issues
 
-    urlfetch_errors = (socket.error, urllib2.HTTPError, httplib.HTTPException)
+    urlfetch_errors = (socket.error, urllib.error.HTTPError,
+                       http.client.HTTPException)
 
     def get_issues(page):
         url = ("https://api.github.com/repos/Khan/khan-exercises/issues"
                "?page=%d&per_page=100" % page)
-        issue_data = util.retry(lambda: urllib2.urlopen(url, timeout=60),
-                                'fetching khan-exercises issues',
-                                lambda exc: isinstance(exc, urlfetch_errors))
+        issue_data = util.retry(
+            lambda: urllib.request.urlopen(url, timeout=60),
+            'fetching khan-exercises issues',
+            lambda exc: isinstance(exc, urlfetch_errors))
 
         # This flag is False if we should continue to the next page of
         # issues and True if we should stop looking at more pages.
@@ -71,7 +74,7 @@ def get_errors(old_reports):
 
         if ((re.findall(
                 r'<(.*?)>; rel="(.*?)"',
-                issue_data.info().getheader("Link"))[0][1] == "next") and
+                issue_data.info().get("Link"))[0][1] == "next") and
                 not done):
             get_issues(page + 1)
 
@@ -82,7 +85,7 @@ def get_errors(old_reports):
         regex_matches = re.findall(
             r'Khan:master/exercises/(.+?)\.html', issue["body"])
         if len(regex_matches) == 0:
-            print issue
+            print(issue)
             continue
 
         user_hash = re.search(USER_HASH_REGEX, issue["body"])
@@ -117,8 +120,8 @@ def get_errors(old_reports):
                 bisect.insort(old_times, created_at)
                 stats[exercise]["href"].append(issue["html_url"])
             else:
-                print ("Ignoring %s because user %s has posted too frequently"
-                       % (issue["html_url"], user_hash))
+                print("Ignoring %s because user %s has posted too frequently"
+                      % (issue["html_url"], user_hash))
 
             stats[exercise]["users"][user_hash] = old_times
 
@@ -132,7 +135,7 @@ def get_errors(old_reports):
                                "this_period": 0}
 
         users = stats[ex]["users"]
-        issue_count = sum([len(users[u]) for u in users.keys()])
+        issue_count = sum([len(users[u]) for u in users])
 
         old_reports[ex]["num_errors"] += issue_count
         old_reports[ex]["this_period"] = issue_count
@@ -181,12 +184,12 @@ def main():
                                                  errors_this_period,
                                                  period_len)
 
-            print ("%s] TOTAL %s/%ss; %s-: %s/%ss; m=%.3f p=%.3f"
-                   % (time.strftime("%Y-%m-%d %H:%M:%S %Z"),
-                      ex_reports[ex]["num_errors"], ex_reports["elapsed_time"],
-                      ex_reports["last_time"],
-                      errors_this_period, period_len,
-                      mean, probability))
+            print("%s] TOTAL %s/%ss; %s-: %s/%ss; m=%.3f p=%.3f"
+                  % (time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+                     ex_reports[ex]["num_errors"], ex_reports["elapsed_time"],
+                     ex_reports["last_time"],
+                     errors_this_period, period_len,
+                     mean, probability))
 
             if (probability > 0.997 and errors_this_period > 1):
                 util.send_to_slack(
@@ -201,7 +204,7 @@ def main():
                        util.thousand_commas(round(mean, 2)),
                        probability),
                     channel="#support")
-        if "href" in new_reports[ex].keys():
+        if "href" in new_reports[ex]:
             del new_reports[ex]["href"]  # don't need to keep the links around
 
     del new_reports["time_this_period"]
@@ -211,6 +214,7 @@ def main():
     exercise_file.write(json.dumps(new_reports))
 
     exercise_file.close()
+
 
 if __name__ == "__main__":
     main()

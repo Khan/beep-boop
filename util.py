@@ -39,7 +39,7 @@ def poisson_cdf(actual, mean):
 
     p = (-mean).exp()
     cum_prob += p
-    for i in xrange(actual):
+    for i in range(actual):
         # We calculate the probability of each lesser value individually, and
         # sum as we go
         p *= mean
@@ -93,7 +93,7 @@ def retry(fn, description, should_retry_fn, retry_count=3):
     and returning True if we should retry or False else.  Of course we
     ignore should_retry_fn after retry_count retries.
     """
-    for i in xrange(1, retry_count):
+    for i in range(1, retry_count):
         try:
             return fn()
         except Exception as why:
