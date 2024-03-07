@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Warn if the bug-report rate has increased recently, on Zendesk.
 
@@ -18,15 +18,16 @@ establish a sensible value.
 """
 
 import base64
-import cPickle
+import pickle
 import datetime
 import json
-import httplib
+import http.client
 import logging
 import re
 import socket
 import time
-import urllib2
+import urllib.request
+import urllib.error
 import argparse
 
 import util
@@ -76,22 +77,22 @@ def get_ticket_data(start_time_t):
 
     url = ('https://khanacademy.zendesk.com/api/v2/exports/tickets.json'
            '?start_time=%s' % start_time_t)
-    request = urllib2.Request(url)
+    request = urllib.request.Request(url)
     # This is the best way to set the user, according to
     #    http://stackoverflow.com/questions/2407126/python-urllib2-basic-auth-problem
-    encoded_password = base64.standard_b64encode('%s:%s' % (ZENDESK_USER,
-                                                            ZENDESK_PASSWORD))
-    request.add_unredirected_header('Authorization',
-                                    'Basic %s' % encoded_password)
+    encoded_password = base64.standard_b64encode(
+        ('%s:%s' % (ZENDESK_USER, ZENDESK_PASSWORD)).encode('utf-8'))
+    request.add_unredirected_header(
+        'Authorization', 'Basic %s' % encoded_password.decode('utf-8'))
 
     def _should_retry(exc):
-        if isinstance(exc, urllib2.HTTPError) and exc.code == 429:
+        if isinstance(exc, urllib.error.HTTPError) and exc.code == 429:
             # quota limits: try again, but wait first.
             time.sleep(int(exc.headers['Retry-After']))
-        return isinstance(exc, (socket.error, urllib2.HTTPError,
-                                httplib.HTTPException))
+        return isinstance(exc, (socket.error, urllib.error.HTTPError,
+                                http.client.HTTPException))
 
-    data = util.retry(lambda: urllib2.urlopen(request, timeout=60),
+    data = util.retry(lambda: urllib.request.urlopen(request, timeout=60),
                       'loading zendesk ticket data',
                       _should_retry)
 
@@ -245,8 +246,8 @@ def _is_off_hours(dt):
 def main():
     try:
         zendesk_status_file = util.relative_path("zendesk")
-        with open(zendesk_status_file) as f:
-            old_data = cPickle.load(f)
+        with open(zendesk_status_file, 'rb') as f:
+            old_data = pickle.load(f)
     except (IOError, EOFError):
         old_data = {"elapsed_time_weekday": 0.0001,   # avoid a divide-by-0
                     "elapsed_time_weekend": 0.0001,   # avoid a divide-by-0
@@ -299,12 +300,12 @@ def main():
                                            num_new_tickets,
                                            time_this_period)
 
-    print ("%s] TOTAL %s/%ss; %s-: %s/%ss; m=%.3f p=%.3f"
-           % (time.strftime("%Y-%m-%d %H:%M:%S %Z"),
-              ticket_count, int(elapsed_time),
-              start_time,
-              num_new_tickets, time_this_period,
-              mean, probability))
+    print("%s] TOTAL %s/%ss; %s-: %s/%ss; m=%.3f p=%.3f"
+          % (time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+             ticket_count, int(elapsed_time),
+             start_time,
+             num_new_tickets, time_this_period,
+             mean, probability))
 
     handle_alerts(new_tickets, time_this_period, mean, probability,
                   start_time, end_time)
@@ -328,15 +329,15 @@ def main():
 
     new_data['last_time_t'] = end_time
 
-    with open(zendesk_status_file, 'w') as f:
-        cPickle.dump(new_data, f)
+    with open(zendesk_status_file, 'wb') as f:
+        pickle.dump(new_data, f)
 
 
 def reset_mean(weekday_mean=None, weekend_mean=None):
     zendesk_status_file = util.relative_path("zendesk")
     try:
         with open(zendesk_status_file) as f:
-            data = cPickle.load(f)
+            data = pickle.load(f)
     except (IOError, EOFError):
         data = {"elapsed_time_weekday": 0.0001,   # avoid a divide-by-0
                 "elapsed_time_weekend": 0.0001,   # avoid a divide-by-0
@@ -349,23 +350,23 @@ def reset_mean(weekday_mean=None, weekend_mean=None):
 
     if weekday_mean is not None:
         # Note: on python 2.7
-        print "Resetting from weekday from {} to {}".format(
+        print("Resetting from weekday from {} to {}".format(
             1.0 * data['ticket_count_weekday'] / data['elapsed_time_weekday'],
             weekday_mean
-        )
+        ))
         data['ticket_count_weekday'] = weekday_mean * \
             data['elapsed_time_weekday']
 
     if weekend_mean is not None:
-        print "Resetting from weekend from {} to {}".format(
+        print("Resetting from weekend from {} to {}".format(
             1.0 * data['ticket_count_weekend'] / data['elapsed_time_weekend'],
             weekend_mean
-        )
+        ))
         data['ticket_count_weekend'] = weekend_mean * \
             data['elapsed_time_weekend']
 
     with open(zendesk_status_file, 'w') as f:
-        cPickle.dump(data, f)
+        pickle.dump(data, f)
 
 
 if __name__ == "__main__":
