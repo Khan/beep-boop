@@ -88,13 +88,14 @@ def get_ticket_data(start_time_t):
     def _should_retry(exc):
         if isinstance(exc, urllib.error.HTTPError) and exc.code == 429:
             # quota limits: try again, but wait first.
+            print("Got 429, waiting %s seconds" % exc.headers['Retry-After'])
             time.sleep(int(exc.headers['Retry-After']))
         return isinstance(exc, (socket.error, urllib.error.HTTPError,
                                 http.client.HTTPException))
 
     data = util.retry(lambda: urllib.request.urlopen(request, timeout=60),
                       'loading zendesk ticket data',
-                      _should_retry)
+                      _should_retry, 100)
 
     return json.load(data)
 
@@ -268,6 +269,7 @@ def main():
     # ask for data that's a bit time-lagged
     end_time = int(time.time()) - 300
     start_time = old_data['last_time_t']
+    print("start_time: %s, end_time: %s" % (start_time, end_time))
 
     # Set flag to track if current time period is a weekend. Separate
     # ticket_count/elapsed_time stats are kept for weekend vs. weekday
