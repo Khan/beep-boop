@@ -95,7 +95,7 @@ def get_ticket_data(start_time_t):
 
     data = util.retry(lambda: urllib.request.urlopen(request, timeout=60),
                       'loading zendesk ticket data',
-                      _should_retry, 100)
+                      _should_retry, 15)
 
     return json.load(data)
 
