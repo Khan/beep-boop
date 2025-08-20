@@ -77,9 +77,7 @@ def merge_int_dicts(d1, d2):
 
 def send_to_slack(message, channel):
     alertlib.Alert(message, severity=logging.ERROR) \
-        .send_to_slack(channel, sender='beep-boop',
-                       icon_emoji=None,  # need to override default value
-                       icon_url='https://slack.global.ssl.fastly.net/9fa2/img/services/hubot_128.png')
+        .send_to_slack(channel, sender='beep-boop', icon_emoji='robot_face')
 
 
 def send_to_pagerduty(message, service):
